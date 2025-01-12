@@ -1,34 +1,58 @@
-// tests/helpers/auth.helper.js
-const Usuarios = require('../../models/UsuariosModel');
-const Roles = require('../../models/RolesModel');
-const PRIVILEGES  = require('../../constants/privileges');
+const mongoose = require('mongoose');
+const PRIVILEGES = require('../../constants/privileges');
+const bcrypt = require('bcryptjs');
 
 const createAdminRole = async () => {
+    const Roles = mongoose.model('Roles');
     const allPrivileges = Object.values(PRIVILEGES)
         .flatMap(group => Object.values(group))
-        .reduce((acc, privilege) => {
-            acc[privilege] = true;
-            return acc;
-        }, {});
+        .reduce((acc, privilege) => ({
+            ...acc,
+            [privilege]: true
+        }), {});
 
-    const adminRole = new Roles({
-        nombre: 'Super Admin Test',
-        descripcion: 'Rol con todos los privilegios para testing',
-        permisos: new Map(Object.entries(allPrivileges)),
-        createdBy: 'system'
+    const role = await Roles.create({
+        nombre: 'Owner',
+        descripcion: 'Rol con privilegios completos',
+        permisos: allPrivileges, // Pasar como objeto normal
+        createdBy: 'system' // Ahora aceptará 'system' por los cambios en el modelo
     });
+    if (!role) {
+        throw new Error('Error al crear el rol admin');
+    }
 
-    return await adminRole.save();
+    return role;
 };
 
 const createAdminUser = async (roleId) => {
-    const adminUser = new Usuarios({
+    const salt = await bcrypt.genSalt(10);
+    const codigo = await bcrypt.hash('123456', salt);
+
+    const Usuarios = mongoose.model('Usuarios');
+    const user = await Usuarios.create({
         nombre: 'Admin Test',
-        codigo: '123456',
+        codigo: codigo,
         rol: roleId,
-        active: true,
         createdBy: 'system'
     });
 
-    return await adminUser.save();
+    if (!user) {
+        throw new Error('Error al crear el usuario admin');
+    }
+
+    return user;
 };
+
+const verifyData = async () => {
+    const Roles = mongoose.model('Roles');
+    const Usuarios = mongoose.model('Usuarios');
+
+    const roles = await Roles.find({});
+    console.log(roles, 'Roles existentes en la base de datos');
+
+    const users = await Usuarios.find({});
+    console.log(users, 'Usuarios existentes en la base de datos');
+};
+
+module.exports = { createAdminRole, createAdminUser, verifyData };
+

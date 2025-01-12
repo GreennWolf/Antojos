@@ -2,15 +2,29 @@
 const Categorias = require('../database/models/CategoriasModel');
 
 const categoriaController = {
-   create: async (req, res) => {
-       try {
-           const categoria = new Categorias(req.body);
-           await categoria.save();
-           res.status(201).json(categoria);
-       } catch (error) {
-           res.status(400).json({ message: error.message });
-       }
-   },
+    create: async (req, res) => {
+        try {
+            // Verificar si ya existe una categoría con el mismo nombre
+            const existingCategoria = await Categorias.findOne({ 
+                nombre: req.body.nombre 
+            });
+            
+            if (existingCategoria) {
+                return res.status(400).json({ 
+                    message: 'Ya existe una categoría con este nombre' 
+                });
+            }
+    
+            const categoria = new Categorias({
+                ...req.body,
+                createdBy: req.user.id
+            });
+            await categoria.save();
+            res.status(201).json(categoria);
+        } catch (error) {
+            res.status(400).json({ message: error.message });
+        }
+    },
 
    getAll: async (req, res) => {
        try {

@@ -5,7 +5,7 @@ const Ingredientes = require('../database/models/IngredientesModel');
 const Tickets = require('../database/models/Tickets');
 const PreCuenta = require('../database/models/PreCuentaModel');
 const bcrypt = require('bcryptjs');
-const { PRIVILEGES } = require('../constants/privileges');
+const PRIVILEGES  = require('../constants/privileges');
 
 const TICKET_POPULATE_PATHS = [
     { path: 'mesa' },
@@ -84,39 +84,49 @@ const ticketsTempsController = {
         try {
             const { codigo, productoId, ticketId, ingredienteId } = req.body;
     
-            // Validar usuario y privilegios
-            const usuario = await Usuarios.findOne({ codigo }).populate('rol');
-            if (!usuario) return res.status(401).json({ message: 'Usuario no encontrado' });
+            // Buscar todos los usuarios activos
+            const usuarios = await Usuarios.find({ active: true }).populate('rol');
+            
+            // Encontrar el usuario que coincida con el código usando bcrypt
+            let usuarioAutorizado = null;
+            for (const usuario of usuarios) {
+                const coincide = await bcrypt.compare(codigo, usuario.codigo);
+                if (coincide) {
+                    usuarioAutorizado = usuario;
+                    break;
+                }
+            }
     
-            if (!usuario.rol || !usuario.rol.permisos.get(PRIVILEGES.TICKETS_TEMP.REMOVE_PRODUCTOS)) {
+            if (!usuarioAutorizado) {
+                return res.status(401).json({ message: 'Usuario no encontrado o código incorrecto' });
+            }
+    
+            // Verificar permisos
+            if (!usuarioAutorizado.rol || !usuarioAutorizado.rol.permisos[PRIVILEGES.TICKETS_TEMP.REMOVE_PRODUCTOS]) {
                 return res.status(403).json({ message: 'No tienes permisos para eliminar productos o ingredientes' });
             }
     
-            // Buscar el ticket correspondiente
+            // El resto de la función permanece igual
             const ticket = await TicketsTemps.findById(ticketId);
             if (!ticket) return res.status(404).json({ message: 'Ticket no encontrado' });
     
-            // Buscar el producto en el ticket
             const productoIndex = ticket.productos.findIndex(p => p.producto.toString() === productoId);
             if (productoIndex === -1) return res.status(404).json({ message: 'Producto no encontrado en el ticket' });
     
             const producto = ticket.productos[productoIndex];
     
             if (ingredienteId) {
-                // Si se pasa un ingrediente, buscarlo en excluidos o extras
+                // Lógica para ingredientes igual que antes...
                 const excluidoIndex = producto.ingredientes.excluidos.findIndex(
                     excluido => excluido.ingrediente.toString() === ingredienteId
                 );
     
                 if (excluidoIndex !== -1) {
-                    // Restaurar stock del ingrediente excluido
                     const ingrediente = await Ingredientes.findById(ingredienteId);
                     if (ingrediente) {
                         ingrediente.stockActual += producto.cantidad;
                         await ingrediente.save();
                     }
-    
-                    // Eliminar ingrediente de excluidos
                     producto.ingredientes.excluidos.splice(excluidoIndex, 1);
                 } else {
                     const extraIndex = producto.ingredientes.extras.findIndex(
@@ -125,31 +135,24 @@ const ticketsTempsController = {
     
                     if (extraIndex !== -1) {
                         const extra = producto.ingredientes.extras[extraIndex];
-    
-                        // Restaurar stock del ingrediente extra
                         const ingrediente = await Ingredientes.findById(ingredienteId);
                         if (ingrediente) {
                             ingrediente.stockActual += extra.cantidad * producto.cantidad;
                             await ingrediente.save();
                         }
-    
-                        // Eliminar ingrediente de extras
                         producto.ingredientes.extras.splice(extraIndex, 1);
                     } else {
                         return res.status(404).json({ message: 'Ingrediente no encontrado en el producto' });
                     }
                 }
             } else {
-                // Si no se pasa un ingrediente, eliminar el producto completo
                 ticket.productosEliminados.push(producto);
     
-                // Restaurar stock del producto
                 const productoDb = await Productos.findById(productoId);
                 if (productoDb) {
                     productoDb.stockActual += producto.cantidad;
                     await productoDb.save();
     
-                    // Restaurar stock de ingredientes del producto
                     for (const ingr of productoDb.ingredientes) {
                         const ingrediente = await Ingredientes.findById(ingr.ingrediente);
                         if (ingrediente) {
@@ -162,13 +165,13 @@ const ticketsTempsController = {
                 ticket.productos.splice(productoIndex, 1);
             }
     
-            // Recalcular total del ticket
             ticket.calcularTotal();
             await ticket.save();
     
             const ticketPopulado = await ticket.populate(TICKET_POPULATE_PATHS);
             res.json(ticketPopulado);
         } catch (error) {
+            console.log('Error en removeProducto:', error);
             res.status(400).json({ message: error.message });
         }
     },
@@ -180,11 +183,25 @@ const ticketsTempsController = {
             const { descuento, codigo, ticketId } = req.body;
     
             // Validar usuario y privilegios
-            const usuario = await Usuarios.findOne({ codigo }).populate('rol');
-            if (!usuario) return res.status(401).json({ message: 'Usuario no encontrado' });
+            const usuarios = await Usuarios.find({ active: true }).populate('rol');
+            
+            // Encontrar el usuario que coincida con el código usando bcrypt
+            let usuarioAutorizado = null;
+            for (const usuario of usuarios) {
+                const coincide = await bcrypt.compare(codigo, usuario.codigo);
+                if (coincide) {
+                    usuarioAutorizado = usuario;
+                    break;
+                }
+            }
     
-            if (!usuario.rol || !usuario.rol.permisos.get(PRIVILEGES.TICKETS_TEMP.APPLY_DESCUENTO)) {
-                return res.status(403).json({ message: 'No autorizado para aplicar descuentos' });
+            if (!usuarioAutorizado) {
+                return res.status(401).json({ message: 'Usuario no encontrado o código incorrecto' });
+            }
+    
+            // Verificar permisos
+            if (!usuarioAutorizado.rol || !usuarioAutorizado.rol.permisos[PRIVILEGES.TICKETS_TEMP.REMOVE_PRODUCTOS]) {
+                return res.status(403).json({ message: 'No tienes permisos para eliminar productos o ingredientes' });
             }
     
             // Buscar el ticket correspondiente
@@ -221,7 +238,7 @@ const ticketsTempsController = {
             // Buscar el TicketTemp correspondiente
             const ticketTemp = await TicketsTemps.findById(ticketTempId);
             if (!ticketTemp) return res.status(404).json({ message: 'Ticket temporal no encontrado' });
-    
+            console.log(metodoDePago , 'method')
             if (tipo === 'precuenta') {
                 // Crear PreCuenta
                 const preCuenta = new PreCuenta({

@@ -9,9 +9,8 @@ router.post('/',
    authorize(PRIVILEGES.ZONAS_IMPRESION.CREATE), 
    zonasController.create
 );
-
 router.get('/', 
-   authorize(PRIVILEGES.ZONAS_IMPRESION.READ), 
+   authorize(PRIVILEGES.ZONAS_IMPRESION.READ ), 
    zonasController.getAll
 );
 

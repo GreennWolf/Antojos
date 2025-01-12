@@ -35,7 +35,7 @@ const TicketsSchema = new mongoose.Schema({
     },
     metodoDePago:{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'MetodoDePago',
+        ref: 'MetodosDePago',
         required: true
     },
     productos: [{
@@ -142,7 +142,7 @@ const TicketsSchema = new mongoose.Schema({
     },
     cliente:{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Cliente',
+        ref: 'Clientes',
         required:false,
     },
     estado: {

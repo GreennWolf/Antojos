@@ -12,6 +12,15 @@ const PRECUENTA_POPULATE_PATHS = [
     { path: 'productos.ingredientes.extras.ingrediente' }
 ];
 
+
+const TICKET_POPULATE_PATHS = [
+    { path: 'mesa' },
+    { path: 'camarero' },
+    { path: 'productos.producto' },
+    { path: 'productos.ingredientes.excluidos.ingrediente' },
+    { path: 'productos.ingredientes.extras.ingrediente' },
+];
+
 const preCuentaController = {
     // Obtener todas las precuentas
     getAllPreCuentas: async (req, res) => {
@@ -71,7 +80,7 @@ const preCuentaController = {
             // Eliminar la precuenta
             await PreCuenta.findByIdAndDelete(preCuentaId);
 
-            const ticketTempPopulado = await ticketTemp.populate(PRECUENTA_POPULATE_PATHS);
+            const ticketTempPopulado = await ticketTemp.populate(TICKET_POPULATE_PATHS);
             res.json(ticketTempPopulado);
         } catch (error) {
             res.status(400).json({ message: error.message });

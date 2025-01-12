@@ -15,7 +15,7 @@ const PreCuentaSchema = new mongoose.Schema({
     },
     metodoDePago:{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'MetodoDePago',
+        ref: 'MetodosDePago',
         required: true
     },
     productos: [{

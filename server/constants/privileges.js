@@ -1,107 +1,113 @@
 // constants/privileges.js
 const PRIVILEGES = {
     TICKETS_TEMP: {
-        ADD_PRODUCTOS: 'tickets_temp.add_productos',
-        REMOVE_PRODUCTOS: 'tickets_temp.remove_productos',
-        MODIFY_CANTIDAD: 'tickets_temp.modify_cantidad',
-        MODIFY_INGREDIENTES_UNCOOKED: 'tickets_temp.modify_ingredientes_uncooked',
-        MODIFY_INGREDIENTES_ALL: 'tickets_temp.modify_ingredientes_all',
-        APPLY_DESCUENTO: 'tickets_temp.apply_descuento',
-        SPLIT_CUENTA: 'tickets_temp.split_cuenta',
-        JOIN_MESAS: 'tickets_temp.join_mesas',
-        MOVE_PRODUCTOS: 'tickets_temp.move_productos',
-        CONFIRMAR_PEDIDO: 'tickets_temp.confirmar_pedido'
+        ADD_PRODUCTOS: 'TICKETS_TEMP.ADD_PRODUCTOS',
+        REMOVE_PRODUCTOS: 'TICKETS_TEMP.REMOVE_PRODUCTOS',
+        MODIFY_CANTIDAD: 'TICKETS_TEMP.MODIFY_CANTIDAD',
+        MODIFY_INGREDIENTES_UNCOOKED: 'TICKETS_TEMP.MODIFY_INGREDIENTES_UNCOOKED',
+        MODIFY_INGREDIENTES_ALL: 'TICKETS_TEMP.MODIFY_INGREDIENTES_ALL',
+        APPLY_DESCUENTO: 'TICKETS_TEMP.APPLY_DESCUENTO',
+        SPLIT_CUENTA: 'TICKETS_TEMP.SPLIT_CUENTA',
+        JOIN_MESAS: 'TICKETS_TEMP.JOIN_MESAS',
+        MOVE_PRODUCTOS: 'TICKETS_TEMP.MOVE_PRODUCTOS',
+        CONFIRMAR_PEDIDO: 'TICKETS_TEMP.CONFIRMAR_PEDIDO'
     },
     TICKETS: {
-        VIEW: 'tickets.view',
-        REPRINT: 'tickets.reprint',
-        MODIFY_METODO_PAGO: 'tickets.modify_metodo_pago',
-        CREATE_FACTURA_A: 'tickets.create_factura_a',
-        VIEW_HISTORY: 'tickets.view_history',
-        REOPEN: 'tickets.reopen'
+        VIEW: 'TICKETS.VIEW',
+        REPRINT: 'TICKETS.REPRINT',
+        MODIFY_METODO_PAGO: 'TICKETS.MODIFY_METODO_PAGO',
+        CREATE_FACTURA_A: 'TICKETS.CREATE_FACTURA_A',
+        VIEW_HISTORY: 'TICKETS.VIEW_HISTORY',
+        REOPEN: 'TICKETS.REOPEN'
     },
     MESAS: {
-        CREATE: 'mesas.create',
-        READ: 'mesas.read',
-        UPDATE: 'mesas.update',
-        DELETE: 'mesas.delete'
+        CREATE: 'MESAS.CREATE',
+        READ: 'MESAS.READ',
+        UPDATE: 'MESAS.UPDATE',
+        DELETE: 'MESAS.DELETE'
     },
     CUENTAS: {
-        CREATE: 'cuentas.create',
-        READ: 'cuentas.read',
-        UPDATE: 'cuentas.update',
-        DELETE: 'cuentas.delete'
+        CREATE: 'CUENTAS.CREATE',
+        READ: 'CUENTAS.READ',
+        UPDATE: 'CUENTAS.UPDATE',
+        DELETE: 'CUENTAS.DELETE'
     },
     ROLES: {
-        CREATE: 'roles.create',
-        READ: 'roles.read',
-        UPDATE: 'roles.update',
-        DELETE: 'roles.delete'
+        CREATE: 'ROLES.CREATE',
+        READ: 'ROLES.READ',
+        UPDATE: 'ROLES.UPDATE',
+        DELETE: 'ROLES.DELETE'
     },
     SALONES: {
-        CREATE: 'salones.create',
-        READ: 'salones.read',
-        UPDATE: 'salones.update',
-        DELETE: 'salones.delete'
+        CREATE: 'SALONES.CREATE',
+        READ: 'SALONES.READ',
+        UPDATE: 'SALONES.UPDATE',
+        DELETE: 'SALONES.DELETE'
     },
     PRODUCTOS: {
-        CREATE: 'productos.create',
-        READ: 'productos.read',
-        UPDATE: 'productos.update',
-        DELETE: 'productos.delete'
+        CREATE: 'PRODUCTOS.CREATE',
+        READ: 'PRODUCTOS.READ',
+        UPDATE: 'PRODUCTOS.UPDATE',
+        DELETE: 'PRODUCTOS.DELETE'
     },
     INGREDIENTES: {
-        CREATE: 'ingredientes.create',
-        READ: 'ingredientes.read',
-        UPDATE: 'ingredientes.update',
-        DELETE: 'ingredientes.delete'
+        CREATE: 'INGREDIENTES.CREATE',
+        READ: 'INGREDIENTES.READ',
+        UPDATE: 'INGREDIENTES.UPDATE',
+        DELETE: 'INGREDIENTES.DELETE'
     },
     CLIENTES: {
-        CREATE: 'clientes.create',
-        READ: 'clientes.read',
-        UPDATE: 'clientes.update',
-        DELETE: 'clientes.delete'
+        CREATE: 'CLIENTES.CREATE',
+        READ: 'CLIENTES.READ',
+        UPDATE: 'CLIENTES.UPDATE',
+        DELETE: 'CLIENTES.DELETE'
     },
     METODOS_PAGO: {
-        CREATE: 'metodos_pago.create',
-        READ: 'metodos_pago.read',
-        UPDATE: 'metodos_pago.update',
-        DELETE: 'metodos_pago.delete'
+        CREATE: 'METODOS_PAGO.CREATE',
+        READ: 'METODOS_PAGO.READ',
+        UPDATE: 'METODOS_PAGO.UPDATE',
+        DELETE: 'METODOS_PAGO.DELETE'
     },
     COMERCIO: {
-        CREATE: 'comercio.create',
-        READ: 'comercio.read',
-        UPDATE: 'comercio.update',
-        DELETE: 'comercio.delete'
+        CREATE: 'COMERCIO.CREATE',
+        READ: 'COMERCIO.READ',
+        UPDATE: 'COMERCIO.UPDATE',
+        DELETE: 'COMERCIO.DELETE'
     },
     CATEGORIAS: {
-        CREATE: 'categorias.create',
-        READ: 'categorias.read',
-        UPDATE: 'categorias.update',
-        DELETE: 'categorias.delete'
+        CREATE: 'CATEGORIAS.CREATE',
+        READ: 'CATEGORIAS.READ',
+        UPDATE: 'CATEGORIAS.UPDATE',
+        DELETE: 'CATEGORIAS.DELETE'
     },
     SUBCATEGORIAS: {
-        CREATE: 'subcategorias.create',
-        READ: 'subcategorias.read',
-        UPDATE: 'subcategorias.update',
-        DELETE: 'subcategorias.delete'
+        CREATE: 'SUBCATEGORIAS.CREATE',
+        READ: 'SUBCATEGORIAS.READ',
+        UPDATE: 'SUBCATEGORIAS.UPDATE',
+        DELETE: 'SUBCATEGORIAS.DELETE'
     },
     ZONAS_IMPRESION: {
-        CREATE: 'zonas_impresion.create',
-        READ: 'zonas_impresion.read',
-        UPDATE: 'zonas_impresion.update',
-        DELETE: 'zonas_impresion.delete'
+        CREATE: 'ZONAS_IMPRESION.CREATE',
+        READ: 'ZONAS_IMPRESION.READ',
+        UPDATE: 'ZONAS_IMPRESION.UPDATE',
+        DELETE: 'ZONAS_IMPRESION.DELETE'
     },
     CAJAS: {
-        CLOSE: 'cajas.close',
-        VIEW: 'cajas.view'
+        CLOSE: 'CAJAS.CLOSE',
+        VIEW: 'CAJAS.VIEW'
     },
     EMPLEADOS: {
-        CREATE: 'empleados.create',
-        READ: 'empleados.read',
-        UPDATE: 'empleados.update',
-        DELETE: 'empleados.delete'
+        CREATE: 'EMPLEADOS.CREATE',
+        READ: 'EMPLEADOS.READ',
+        UPDATE: 'EMPLEADOS.UPDATE',
+        DELETE: 'EMPLEADOS.DELETE'
     }
- };
- 
- module.exports = PRIVILEGES;
+};
+
+// Función helper para verificar permisos (opcional)
+const hasPermission = (userPermisos, requiredPermission) => {
+    const [section, action] = requiredPermission.split('.');
+    return userPermisos?.[section]?.[action] === true;
+};
+
+module.exports = PRIVILEGES;

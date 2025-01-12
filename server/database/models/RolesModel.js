@@ -1,7 +1,4 @@
-// models/RolesModel.js
 const mongoose = require('mongoose');
-
-const { PRIVILEGES } = require('../../constants/privileges');
 
 const RolesSchema = new mongoose.Schema({
     nombre: {
@@ -21,44 +18,46 @@ const RolesSchema = new mongoose.Schema({
         default: true
     },
     permisos: {
-        type: Map,
-        of: Boolean,
-        default: () => {
-            // Crear un mapa con todos los privilegios en false
-            const allPrivileges = Object.values(PRIVILEGES)
-                .flatMap(group => Object.values(group));
-            return new Map(allPrivileges.map(priv => [priv, false]));
-        }
+        type: Object,
+        required: true,
+        default: () => ({}) 
     },
     createdBy: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.Mixed, // Mantener Mixed para permitir string u ObjectId
         ref: 'Usuarios',
-        required: true
+        required: true,
+        default: 'system'
+    },
+    isSystemCreated: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true
 });
 
-// Método para verificar si tiene un permiso específico
+// Middleware pre-save para manejar isSystemCreated
+RolesSchema.pre('save', function(next) {
+    if (this.createdBy === 'system') {
+        this.isSystemCreated = true;
+    }
+    next();
+});
+
+// Actualizar los métodos existentes para trabajar con Object en lugar de Map
 RolesSchema.methods.hasPermission = function(permission) {
-    return this.permisos.get(permission) === true;
+    return Boolean(this.permisos[permission]);
 };
 
 RolesSchema.methods.hasMultiplePermission = function(permissions) {
-    return permissions.every(permission => this.permisos.get(permission) === true);
+    return permissions.every(permission => Boolean(this.permisos[permission]));
 };
 
-// Método para actualizar múltiples permisos
 RolesSchema.methods.updatePermissions = function(permissions) {
-    for (const [permission, value] of Object.entries(permissions)) {
-        if (this.permisos.has(permission)) {
-            this.permisos.set(permission, value);
-        }
-    }
+    this.permisos = { ...this.permisos, ...permissions };
     return this.save();
 };
 
-// Método para activar/desactivar el rol
 RolesSchema.methods.toggleActive = function() {
     this.active = !this.active;
     return this.save();

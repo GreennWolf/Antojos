@@ -2,11 +2,22 @@
 const Comercio = require('../database/models/ComercioModel');
 
 const comercioController = {
-   create: async (req, res) => {
+   createOrUpdate: async (req, res) => {
        try {
-           const comercio = new Comercio(req.body);
-           await comercio.save();
-           res.status(201).json(comercio);
+           // Buscar si ya existe un comercio
+           let comercio = await Comercio.findOne();
+
+           if (comercio) {
+               // Si existe, actualizar
+               Object.assign(comercio, req.body);
+               await comercio.save();
+               return res.json(comercio);
+           } else {
+               // Si no existe, crear
+               comercio = new Comercio(req.body);
+               await comercio.save();
+               return res.status(201).json(comercio);
+           }
        } catch (error) {
            res.status(400).json({ message: error.message });
        }
@@ -14,42 +25,45 @@ const comercioController = {
 
    get: async (req, res) => {
        try {
-           // Asumimos que solo habrá un comercio
            const comercio = await Comercio.findOne();
-           if (!comercio) return res.status(404).json({ message: 'Datos del comercio no encontrados' });
+           if (!comercio) {
+               // Si no existe, devolver un objeto vacío o estructura base
+               return res.json({
+                   nombre: '',
+                   direccion: '',
+                   telefono: '',
+                   email: '',
+                   rut: '',
+                   logo: null,
+                   // otros campos por defecto que necesites
+               });
+           }
            res.json(comercio);
        } catch (error) {
            res.status(500).json({ message: error.message });
        }
    },
 
-   update: async (req, res) => {
-       try {
-           const comercio = await Comercio.findOne();
-           if (!comercio) {
-               return res.status(404).json({ message: 'Datos del comercio no encontrados' });
-           }
-
-           Object.assign(comercio, req.body);
-           await comercio.save();
-           res.json(comercio);
-       } catch (error) {
-           res.status(400).json({ message: error.message });
-       }
-   },
-
    uploadLogo: async (req, res) => {
        try {
-           const comercio = await Comercio.findOne();
+           let comercio = await Comercio.findOne();
+           console.log(req.file , 'archivo')
            if (!comercio) {
-               return res.status(404).json({ message: 'Datos del comercio no encontrados' });
+               // Si no existe el comercio, crearlo con el logo
+               comercio = new Comercio({
+                   logo: req.file?.path
+               });
+           } else {
+               // Si existe, actualizar el logo
+               comercio.logo = req.file?.path;
            }
+
+
 
            if (!req.file) {
                return res.status(400).json({ message: 'No se ha proporcionado ningún archivo' });
            }
 
-           comercio.logo = req.file.path;
            await comercio.save();
            res.json(comercio);
        } catch (error) {

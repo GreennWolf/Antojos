@@ -5,6 +5,11 @@ const rolesController = require('../controllers/rolesController');
 const authorize = require('../middlewares/authorize');
 const PRIVILEGES  = require('../constants/privileges');
 
+
+router.get('/privileges/all',
+   rolesController.getPrivileges
+);
+
 router.post('/', 
    authorize(PRIVILEGES.ROLES.CREATE), 
    rolesController.create
@@ -39,5 +44,7 @@ router.patch('/:id/toggle',
    authorize(PRIVILEGES.ROLES.UPDATE),
    rolesController.toggleActive
 );
+
+
 
 module.exports = router;
