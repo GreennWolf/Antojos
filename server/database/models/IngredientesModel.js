@@ -1,4 +1,3 @@
-// models/IngredientesModel.js
 const mongoose = require('mongoose');
 
 const IngredientesSchema = new mongoose.Schema({
@@ -31,14 +30,13 @@ const IngredientesSchema = new mongoose.Schema({
     },
     categoria: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Categoria',
-        required: true,
-        index: true
+        ref: 'Categorias',
+        required: true
     },
     ingredientes: [{
         ingrediente: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Ingredientes',
+            ref: 'Ingredientes'
         },
         cantidad: {
             type: Number,
@@ -64,14 +62,15 @@ const IngredientesSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Usuarios',
         required: true
-    },
+    }
 }, {
     timestamps: true
 });
 
-// Índices
-IngredientesSchema.index({ categoria: 1, subCategoria: 1, active: 1 });
-IngredientesSchema.index({ nombre: 'text', descripcion: 'text' });
+// Corregimos los índices
+IngredientesSchema.index({ categoria: 1, active: 1 });
+IngredientesSchema.index({ nombre: 'text' });
+
 IngredientesSchema.methods.toggleActive = function() {
     this.active = !this.active;
     return this.save();

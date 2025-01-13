@@ -1,5 +1,6 @@
 // controllers/ingredientesController.js
 const Ingredientes = require('../database/models/IngredientesModel');
+require('../database/models/CategoriasModel');
 
 const ingredientesController = {
    create: async (req, res) => {
@@ -16,16 +17,24 @@ const ingredientesController = {
    },
 
    getAll: async (req, res) => {
-       try {
-           const ingredientes = await Ingredientes.find()
-               .populate('categoria')
-               .populate('ingredientes.ingrediente')
-               .populate('createdBy', 'nombre');
-           res.json(ingredientes);
-       } catch (error) {
-           res.status(500).json({ message: error.message });
-       }
-   },
+    try {
+        const ingredientes = await Ingredientes.find()
+            .populate('categoria', 'nombre')  // Solo traemos el nombre de la categoría
+            .populate({
+                path: 'ingredientes.ingrediente',
+                select: 'nombre precio'  // Limitamos los campos para evitar recursión
+            })
+            .populate('createdBy', 'nombre');
+            
+        res.json(ingredientes);
+    } catch (error) {
+        console.error('Error en getAll:', error);  // Logging del error
+        res.status(500).json({ 
+            message: 'Error al obtener ingredientes',
+            error: error.message 
+        });
+    }
+},
 
    getById: async (req, res) => {
        try {

@@ -4,6 +4,7 @@ import { Personal } from '../pages/Personal';
 import { useNavigate } from 'react-router-dom';
 import { Configuracion } from '../pages/Configuracion';
 import Productos from '../pages/Productos';
+import { Salones } from '../pages/Salones';
 
 const TabButton = ({ isActive, onClick, icon: Icon, label }) => (
   <button
@@ -42,7 +43,7 @@ export const MainHub = () => {
   };
 
   const tabs = [
-    { id: 'salones', label: 'Salones', icon: Home, component: <div>Salones Component</div> },
+    { id: 'salones', label: 'Salones', icon: Home, component: <Salones/> },
     { id: 'productos', label: 'Productos', icon: Package, component: <Productos/> },
     { id: 'personal', label: 'Personal', icon: Users, component: <Personal/> },
     { id: 'administracion', label: 'Administración', icon: FileText, component: <div>Administración Component</div> },

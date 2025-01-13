@@ -236,10 +236,10 @@ export const Ingredientes = () => {
                   <td className="px-4 py-3">{ingrediente.nombre}</td>
                   <td className="px-4 py-3">{ingrediente.categoria?.nombre}</td>
                   <td className="px-4 py-3 text-right">
-                    {ingrediente.precio?.toLocaleString('es-PY', { style: 'currency', currency: 'PYG' })}
+                    {ingrediente.precio?.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {ingrediente.costo?.toLocaleString('es-PY', { style: 'currency', currency: 'PYG' })}
+                    {ingrediente.costo?.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                   </td>
                   <td className="px-4 py-3 text-right">
                     {ingrediente.stockActual} / {ingrediente.stockMinimo}

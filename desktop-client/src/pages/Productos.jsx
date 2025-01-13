@@ -3,6 +3,7 @@ import { getPrivilegios } from '../services/userService';
 import { Categorias } from '../components/ProductosTab/Categorias';
 import { SubCategorias } from '../components/ProductosTab/SubCategorias';
 import { Ingredientes } from '../components/ProductosTab/Ingredientes';
+import { Producto } from '../components/ProductosTab/Producto';
 
 const TabButton = ({ isActive, onClick, children }) => (
   <button
@@ -25,7 +26,7 @@ export const Productos = () => {
       id: 'productos', 
       label: 'Productos', 
       privilege: { action: 'READ', resource: 'PRODUCTOS' },
-      component:<div>Componente</div>
+      component:<Producto/>
     },
     { 
       id: 'ingredientes', 

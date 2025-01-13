@@ -34,14 +34,14 @@ export const createIngrediente = async (ingredienteData) => {
 
 // Función para obtener todos los ingredientes
 export const getIngredientes = async () => {
-   try {
-       const response = await api.get('/');
-       return response.data;
-   } catch (error) {
-       console.error('Error al obtener ingredientes:', error);
-       throw error;
-   }
-};
+    try {
+        const response = await api.get('/');
+        return response.data;
+    } catch (error) {
+        console.error('Error detallado:', error.response?.data || error.message);
+        throw error;
+    }
+ };
 
 // Función para buscar ingredientes por nombre
 export const searchIngredientesByNombre = async (nombre) => {

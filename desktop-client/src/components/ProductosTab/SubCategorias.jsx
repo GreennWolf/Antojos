@@ -25,8 +25,6 @@ import {
   updateSubCategoria,
   deleteSubCategoria,
   toggleSubCategoriaActive,
-  addIngredienteToSubCategoria,
-  removeIngredienteFromSubCategoria
 } from '../../services/subCategoriasService';
 import { getCategorias } from '../../services/categoriasService';
 import { getIngredientes } from '../../services/ingredientesService';
@@ -36,7 +34,6 @@ export const SubCategorias = () => {
   const { showConfirm } = useConfirm();
   const inputRef = useRef(null);
   const searchInputRef = useRef(null);
-  const descripcionRef = useRef(null);
 
   // Estados principales
   const [subCategorias, setSubCategorias] = useState([]);
@@ -52,7 +49,6 @@ export const SubCategorias = () => {
   const [ingredientesDisponibles, setIngredientesDisponibles] = useState([]);
   const [ingredientesSeleccionados, setIngredientesSeleccionados] = useState([]);
   const [todosLosIngredientes, setTodosLosIngredientes] = useState([]);
-  const [ingredientesSearch, setIngredientesSearch] = useState('');
 
   // Estado del formulario
   const [formData, setFormData] = useState({
@@ -96,10 +92,6 @@ export const SubCategorias = () => {
     setIsViewDialogOpen(true);
   };
 
-  const handleCloseViewDialog = () => {
-    setViewingSubCategoria(null);
-    setIsViewDialogOpen(false);
-  };
 
   // Manejadores del formulario
   const handleInputChange = (e) => {
@@ -117,11 +109,16 @@ export const SubCategorias = () => {
       return;
     }
     try {
+      const dataToSend = {
+        ...formData,
+        ingredientesPermitidos: ingredientesSeleccionados.map(ing => ing._id)
+      };
+
       if (editingSubCategoria) {
-        await updateSubCategoria(editingSubCategoria._id, formData);
+        await updateSubCategoria(editingSubCategoria._id, dataToSend);
         toast.success('Subcategoría actualizada correctamente');
       } else {
-        await createSubCategoria(formData);
+        await createSubCategoria(dataToSend);
         toast.success('Subcategoría creada correctamente');
       }
       handleCloseDialog();
@@ -129,7 +126,7 @@ export const SubCategorias = () => {
     } catch (error) {
       toast.error(error.message || 'Error al procesar la operación');
     }
-  };
+};
 
   const handleDelete = async (id) => {
     showConfirm(
@@ -159,6 +156,20 @@ export const SubCategorias = () => {
   // Funciones para manejar el diálogo
   const handleOpenDialog = (subCategoria = null) => {
     if (subCategoria) {
+      // Procesamos los IDs de ingredientes permitidos
+      const permitidosIds = subCategoria.ingredientesPermitidos.map(ing => 
+        typeof ing === 'string' ? ing : ing._id
+      );
+      
+      // Filtramos los ingredientes en las listas correspondientes
+      const selectedIngs = todosLosIngredientes.filter(ing => 
+        permitidosIds.includes(ing._id)
+      );
+      const availableIngs = todosLosIngredientes.filter(ing => 
+        !permitidosIds.includes(ing._id)
+      );
+
+      // Configuramos el formulario
       setFormData({
         nombre: subCategoria.nombre,
         descripcion: subCategoria.descripcion,
@@ -167,19 +178,13 @@ export const SubCategorias = () => {
         active: subCategoria.active,
         ingredientesPermitidos: subCategoria.ingredientesPermitidos || []
       });
+
+      // Actualizamos estados
       setEditingSubCategoria(subCategoria);
-      
-      // Configurar las listas de ingredientes
-      const selectedIngs = todosLosIngredientes.filter(ing => 
-        subCategoria.ingredientesPermitidos.includes(ing._id)
-      );
-      const availableIngs = todosLosIngredientes.filter(ing => 
-        !subCategoria.ingredientesPermitidos.includes(ing._id)
-      );
-      
       setIngredientesSeleccionados(selectedIngs.map(ing => ({...ing, selected: false})));
       setIngredientesDisponibles(availableIngs.map(ing => ({...ing, selected: false})));
     } else {
+      // Reset para nuevo registro
       setFormData({
         nombre: '',
         descripcion: '',
@@ -190,10 +195,10 @@ export const SubCategorias = () => {
       });
       setEditingSubCategoria(null);
       setIngredientesSeleccionados([]);
-      // Resetear ingredientes disponibles a su estado original
       const resetIngs = todosLosIngredientes.map(ing => ({...ing, selected: false}));
       setIngredientesDisponibles(resetIngs);
     }
+    
     setIsDialogOpen(true);
     setTimeout(() => inputRef.current?.focus(), 100);
   };
@@ -209,7 +214,6 @@ export const SubCategorias = () => {
       active: true,
       ingredientesPermitidos: []
     });
-    setIngredientesSearch('');
   };
 
   // Funciones para la gestión de ingredientes
@@ -244,14 +248,14 @@ export const SubCategorias = () => {
       const toMove = ingredientesSeleccionados.filter(ing => ing.selected);
       setIngredientesDisponibles(prev => [...prev, ...toMove.map(ing => ({...ing, selected: false}))]);
       setIngredientesSeleccionados(prev => prev.filter(ing => !ing.selected));
+      // Aquí está el cambio principal
+      const moveIds = toMove.map(ing => ing._id);
       setFormData(prev => ({
         ...prev,
-        ingredientesPermitidos: prev.ingredientesPermitidos.filter(id => 
-          !toMove.map(ing => ing._id).includes(id)
-        )
+        ingredientesPermitidos: prev.ingredientesPermitidos.filter(id => !moveIds.includes(id))
       }));
     }
-  };
+};
 
   const handleSelectIngrediente = (ingrediente, lista) => {
     const updateList = lista === 'disponibles' ? setIngredientesDisponibles : setIngredientesSeleccionados;
@@ -273,6 +277,7 @@ export const SubCategorias = () => {
       subCategoria.iva?.toString().includes(searchString)
     );
   });
+
   return (
     <div className="space-y-4">
       <ToastContainer />
@@ -345,7 +350,7 @@ export const SubCategorias = () => {
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'}`}
                     >
-                      {subCategoria.active ? (
+                  {subCategoria.active ? (
                         <>
                           <Check className="w-3 h-3 mr-1" />
                           Activo
@@ -403,6 +408,7 @@ export const SubCategorias = () => {
           </tbody>
         </table>
       </div>
+
       {/* Modal de vista detallada */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="bg-[#F0F0D7] max-w-3xl">
@@ -676,5 +682,5 @@ export const SubCategorias = () => {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 };
