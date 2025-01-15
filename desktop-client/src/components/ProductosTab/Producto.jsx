@@ -335,13 +335,18 @@ export const Producto = () => {
     );
   };
 
-  const handleRemoveIngrediente = (index) => {
+  const handleRemoveIngrediente = (index, e) => {
+    e.preventDefault(); // Prevenir el submit del formulario
+    e.stopPropagation(); // Evitar la propagación del evento
+
     const ingrediente = ingredientesSeleccionados[index];
     setIngredientesSeleccionados(prev => prev.filter((_, i) => i !== index));
     setIngredientesDisponibles(prev => [...prev, {...ingrediente, selected: false}]);
   };
 
-  const handleRemoveProducto = (index) => {
+  const handleRemoveProducto = (index, e) => {
+    e.preventDefault(); // Prevenir el submit del formulario
+    e.stopPropagation(); // Evitar la propagación del evento
     const producto = productosSeleccionados[index];
     setProductosSeleccionados(prev => prev.filter((_, i) => i !== index));
     setProductosDisponibles(prev => [...prev, {...producto, selected: false}]);
@@ -786,7 +791,7 @@ export const Producto = () => {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleRemoveIngrediente(index)}
+                                      onClick={(e) => handleRemoveIngrediente(index,e)}
                                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -859,7 +864,7 @@ export const Producto = () => {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleRemoveProducto(index)}
+                                      onClick={(e) => handleRemoveProducto(index,e)}
                                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                     >
                                       <Trash2 className="w-4 h-4" />

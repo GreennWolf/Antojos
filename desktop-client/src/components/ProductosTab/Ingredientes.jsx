@@ -129,36 +129,53 @@ export const Ingredientes = () => {
 
   const handleAddIngrediente = () => {
     if (!selectedIngrediente || !cantidadIngrediente || !unidadIngrediente) {
-      toast.error(
-        "Debe seleccionar un ingrediente y especificar la cantidad y unidad"
-      );
+      toast.error('Debe seleccionar un ingrediente y especificar la cantidad y unidad');
       return;
     }
-
-    const nuevoIngrediente = {
-      ingrediente: selectedIngrediente._id,
-      nombre: selectedIngrediente.nombre,
-      cantidad: parseFloat(cantidadIngrediente),
-      unidad: unidadIngrediente,
-    };
-
-    setIngredientesEnReceta((prev) => [...prev, nuevoIngrediente]);
-    setFormData((prev) => ({
-      ...prev,
-      ingredientes: [
-        ...prev.ingredientes,
-        {
+  
+    // Verificar si el ingrediente ya existe
+    const ingredienteExistenteIndex = ingredientesEnReceta.findIndex(
+      ing => ing.ingrediente === selectedIngrediente._id && ing.unidad === unidadIngrediente
+    );
+  
+    if (ingredienteExistenteIndex !== -1) {
+      // Si existe, actualizar la cantidad
+      const nuevosIngredientes = [...ingredientesEnReceta];
+      nuevosIngredientes[ingredienteExistenteIndex].cantidad += parseFloat(cantidadIngrediente);
+  
+      setIngredientesEnReceta(nuevosIngredientes);
+      setFormData(prev => ({
+        ...prev,
+        ingredientes: nuevosIngredientes.map(ing => ({
+          ingrediente: ing.ingrediente,
+          cantidad: ing.cantidad,
+          unidad: ing.unidad
+        }))
+      }));
+    } else {
+      // Si no existe, agregar nuevo ingrediente
+      const nuevoIngrediente = {
+        ingrediente: selectedIngrediente._id,
+        nombre: selectedIngrediente.nombre,
+        cantidad: parseFloat(cantidadIngrediente),
+        unidad: unidadIngrediente
+      };
+  
+      setIngredientesEnReceta(prev => [...prev, nuevoIngrediente]);
+      setFormData(prev => ({
+        ...prev,
+        ingredientes: [...prev.ingredientes, {
           ingrediente: selectedIngrediente._id,
           cantidad: parseFloat(cantidadIngrediente),
-          unidad: unidadIngrediente,
-        },
-      ],
-    }));
-
+          unidad: unidadIngrediente
+        }]
+      }));
+    }
+  
     // Resetear los campos
     setSelectedIngrediente(null);
-    setCantidadIngrediente("");
-    setUnidadIngrediente("g");
+    setCantidadIngrediente('');
+    setUnidadIngrediente('g');
   };
 
   const handleRemoveIngrediente = (index) => {
@@ -198,27 +215,36 @@ export const Ingredientes = () => {
     if (ingrediente) {
       setFormData({
         ...ingrediente,
-        categoria: ingrediente.categoria?._id || "",
+        categoria: ingrediente.categoria?._id || '',
       });
       setEditingIngrediente(ingrediente);
-      setIngredientesEnReceta(
-        ingrediente.ingredientes?.map((ing) => ({
-          ingrediente: ing.ingrediente._id,
-          nombre: ing.ingrediente.nombre,
-          cantidad: ing.cantidad,
-          unidad: ing.unidad,
-        })) || []
-      );
+  
+      // Agrupar ingredientes por ID y unidad
+      const ingredientesAgrupados = ingrediente.ingredientes?.reduce((acc, ing) => {
+        const key = `${ing.ingrediente._id}-${ing.unidad}`;
+        if (!acc[key]) {
+          acc[key] = {
+            ingrediente: ing.ingrediente._id,
+            nombre: ing.ingrediente.nombre,
+            cantidad: 0,
+            unidad: ing.unidad
+          };
+        }
+        acc[key].cantidad += ing.cantidad;
+        return acc;
+      }, {});
+  
+      setIngredientesEnReceta(Object.values(ingredientesAgrupados) || []);
     } else {
       setFormData({
-        nombre: "",
+        nombre: '',
         precio: 0,
         costo: 0,
         stockActual: 0,
         stockMinimo: 0,
-        categoria: "",
+        categoria: '',
         active: true,
-        ingredientes: [],
+        ingredientes: []
       });
       setEditingIngrediente(null);
       setIngredientesEnReceta([]);

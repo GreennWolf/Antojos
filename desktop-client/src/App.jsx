@@ -4,6 +4,7 @@ import { Login } from './pages/Login';
 import { Personal } from './pages/Personal';
 import { MainHub } from './components/MainHub';
 import { ToastContainer } from 'react-toastify';
+import Mesas from './components/MesasTab/Mesas';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/main" element={<MainHub />} />
+        <Route path="/mesas/:mesaId" element={<Mesas />} />
       </Routes>
     </BrowserRouter>
   );

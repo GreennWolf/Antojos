@@ -104,7 +104,7 @@ export const MainHub = () => {
       </header>
 
       {/* Contenido principal */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-8xl mx-auto px-4 py-6">
         <div className="bg-[#D0DDD0] rounded-lg shadow-lg border border-[#AAB99A] min-h-[calc(100vh-8rem)]">
           <div className="p-6 text-[#727D73]">
             {renderContent()}
