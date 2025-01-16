@@ -44,11 +44,11 @@ const Mesas = () => {
     total: 0
   });
 
-  // Estados para menú contextual y modal de ingredientes
+  // Estados para modales
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isIngredientModalOpen, setIsIngredientModalOpen] = useState(false);
+  const [isRemoveIngredientModalOpen, setIsRemoveIngredientModalOpen] = useState(false);
   const [ingredientesDisponibles, setIngredientesDisponibles] = useState([]);
-
   useEffect(() => {
     // Obtener el usuario del localStorage
     const userStored = localStorage.getItem('user');
@@ -114,23 +114,19 @@ const Mesas = () => {
 
   const handleAddProducto = (producto) => {
     setPedidoActual(prev => {
-      const productoExistente = prev.productos.find(p => p._id === producto._id);
-      let nuevosProductos = productoExistente
-        ? prev.productos.map(p => p._id === producto._id ? { ...p, cantidad: p.cantidad + 1 } : p)
-        : [...prev.productos, { ...producto, cantidad: 1 }];
-      
+      const nuevoProducto = { ...producto, cantidad: 1, uid: Date.now() }; // Añadimos un uid único
       return {
-        productos: nuevosProductos,
-        total: nuevosProductos.reduce((total, p) => total + (p.precio * p.cantidad), 0)
+        productos: [...prev.productos, nuevoProducto],
+        total: prev.productos.reduce((total, p) => total + (p.precio * p.cantidad), 0) + producto.precio
       };
     });
   };
 
-  const handleUpdateCantidad = (productoId, nuevaCantidad) => {
+  const handleUpdateCantidad = (uid, nuevaCantidad) => {
     if (nuevaCantidad < 1) return;
     setPedidoActual(prev => {
       const nuevosProductos = prev.productos.map(p => 
-        p._id === productoId ? { ...p, cantidad: nuevaCantidad } : p
+        p.uid === uid ? { ...p, cantidad: nuevaCantidad } : p
       );
       return {
         productos: nuevosProductos,
@@ -148,7 +144,7 @@ const Mesas = () => {
   const handleQuitarIngrediente = (producto, ingredienteId) => {
     setPedidoActual(prev => {
       const nuevosProductos = prev.productos.map(p => {
-        if (p._id === producto._id) {
+        if (p.uid === producto.uid) {
           return {
             ...p,
             ingredientes: p.ingredientes.filter(ing => ing.ingrediente._id !== ingredienteId)
@@ -162,16 +158,17 @@ const Mesas = () => {
         productos: nuevosProductos
       };
     });
+    setIsRemoveIngredientModalOpen(false);
   };
 
-  const handleEliminarProducto = (productoId) => {
-    setPedidoActual(prev => ({
-      ...prev,
-      productos: prev.productos.filter(p => p._id !== productoId),
-      total: prev.productos
-        .filter(p => p._id !== productoId)
-        .reduce((total, p) => total + (p.precio * p.cantidad), 0)
-    }));
+  const handleEliminarProducto = (uid) => {
+    setPedidoActual(prev => {
+      const nuevosProductos = prev.productos.filter(p => p.uid !== uid);
+      return {
+        productos: nuevosProductos,
+        total: nuevosProductos.reduce((total, p) => total + (p.precio * p.cantidad), 0)
+      };
+    });
   };
   if (isLoading) {
     return <div className="min-h-screen bg-[#F0F0D7] flex items-center justify-center">
@@ -201,11 +198,11 @@ const Mesas = () => {
 
       {/* Contenido principal */}
       <div className="flex-1 max-w-8xl mx-auto px-4 py-6 w-full">
-        <div className="flex gap-4 h-[calc(100vh-10rem)]">
+        <div className="flex gap-4 h-[calc(100vh-12rem)]">
           {/* Panel izquierdo - Categorías y productos */}
           <div className="flex-1 bg-white rounded-lg shadow-lg border border-[#AAB99A] p-6">
             <Tabs value={categoriaActiva} onValueChange={setCategoriaActiva} className="h-full">
-              <TabsList className="grid grid-cols-10 gap-2 bg-transparent h-auto p-0">
+              <TabsList className="flex gap-2 bg-transparent h-auto p-0 mb-4">
                 {categorias.map(categoria => (
                   <TabsTrigger
                     key={categoria._id}
@@ -223,10 +220,10 @@ const Mesas = () => {
                 <TabsContent 
                   key={categoria._id} 
                   value={categoria._id}
-                  className="mt-6 h-[calc(100%-4rem)] flex flex-col"
+                  className="mt-6 h-[calc(100%-4rem)]"
                 >
                   {/* SubCategorías */}
-                  <div className="flex gap-2 overflow-x-auto py-2 px-1">
+                  <div className="flex gap-2 overflow-x-auto py-2">
                     {subCategorias
                       .filter(subcat => subcat.categoria?._id === categoria._id)
                       .map(subcategoria => (
@@ -245,7 +242,7 @@ const Mesas = () => {
                   </div>
 
                   {/* Grid de productos */}
-                  <div className="grid grid-cols-6 gap-4 mt-4 overflow-y-auto pb-4">
+                  <div className="grid grid-cols-4 gap-4 mt-4 h-[calc(100%-4rem)] overflow-y-auto">
                     {productos
                       .filter(producto => 
                         producto.active && 
@@ -257,8 +254,8 @@ const Mesas = () => {
                           onClick={() => handleAddProducto(producto)}
                           className="cursor-pointer hover:bg-[#D0DDD0] transition-colors border-[#AAB99A]"
                         >
-                          <div className="p-4 text-center space-y-2">
-                            <div className="font-medium text-[#727D73] text-lg">
+                          <div className="p-4">
+                            <div className="font-medium text-[#727D73] text-lg mb-2">
                               {producto.nombre}
                             </div>
                             <div className="text-gray-600">
@@ -275,49 +272,51 @@ const Mesas = () => {
               ))}
             </Tabs>
           </div>
-
           {/* Panel derecho - Pedido actual */}
           <div className="w-96 bg-white rounded-lg shadow-lg border border-[#AAB99A] flex flex-col">
             <div className="p-4 border-b border-[#AAB99A]">
               <h2 className="text-lg font-medium text-[#727D73]">Pedido Actual</h2>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 p-4">
               {pedidoActual?.productos.map(producto => (
-                <ContextMenu key={producto._id}>
+                <ContextMenu key={producto.uid}>
                   <ContextMenuTrigger>
-                    <div className="flex items-center justify-between py-2 border-b border-[#AAB99A] last:border-0">
-                      <div className="flex-1">
-                        <div className="font-medium text-[#727D73]">{producto.nombre}</div>
-                        <div className="text-sm text-gray-600">
-                          {(producto.precio * producto.cantidad).toLocaleString('es-ES', { 
-                            style: 'currency', 
-                            currency: 'EUR' 
-                          })}
-                        </div>
-                        {producto.ingredientes?.length > 0 && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            Ingredientes: {producto.ingredientes.map(ing => ing.ingrediente.nombre).join(', ')}
+                    <Card className="mb-3 last:mb-0 border border-[#AAB99A]">
+                      <div className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="font-medium text-[#727D73]">{producto.nombre}</div>
+                            <div className="text-sm text-gray-600">
+                              {(producto.precio * producto.cantidad).toLocaleString('es-ES', { 
+                                style: 'currency', 
+                                currency: 'EUR' 
+                              })}
+                            </div>
+                            {producto.ingredientes?.length > 0 && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                Ingredientes: {producto.ingredientes.map(ing => ing.ingrediente.nombre).join(', ')}
+                              </div>
+                            )}
                           </div>
-                        )}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleUpdateCantidad(producto.uid, producto.cantidad - 1)}
+                              className="px-2 py-1 bg-[#727D73] text-[#F0F0D7] rounded hover:bg-[#727D73]/90 transition-colors"
+                            >
+                              -
+                            </button>
+                            <span className="w-8 text-center text-[#727D73]">{producto.cantidad}</span>
+                            <button
+                              onClick={() => handleUpdateCantidad(producto.uid, producto.cantidad + 1)}
+                              className="px-2 py-1 bg-[#727D73] text-[#F0F0D7] rounded hover:bg-[#727D73]/90 transition-colors"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleUpdateCantidad(producto._id, producto.cantidad - 1)}
-                          className="px-2 py-1 bg-[#727D73] text-[#F0F0D7] rounded hover:bg-[#727D73]/90 transition-colors"
-                        >
-                          -
-                        </button>
-                        <span className="w-8 text-center text-[#727D73]">{producto.cantidad}</span>
-                        <button
-                          onClick={() => handleUpdateCantidad(producto._id, producto.cantidad + 1)}
-                          className="px-2 py-1 bg-[#727D73] text-[#F0F0D7] rounded hover:bg-[#727D73]/90 transition-colors"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
+                    </Card>
                   </ContextMenuTrigger>
 
                   <ContextMenuContent className="min-w-[160px] bg-white rounded-lg shadow-lg border border-[#AAB99A] p-1">
@@ -332,7 +331,10 @@ const Mesas = () => {
                         <ContextMenuSeparator className="my-1 border-[#AAB99A]" />
                         <ContextMenuItem 
                           className="px-3 py-2 text-[#727D73] hover:bg-[#D0DDD0] rounded-md cursor-pointer transition-colors"
-                          onClick={() => setSelectedProduct(producto)}
+                          onClick={() => {
+                            setSelectedProduct(producto);
+                            setIsRemoveIngredientModalOpen(true);
+                          }}
                         >
                           Quitar Ingrediente
                         </ContextMenuItem>
@@ -341,7 +343,7 @@ const Mesas = () => {
                     <ContextMenuSeparator className="my-1 border-[#AAB99A]" />
                     <ContextMenuItem 
                       className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-md cursor-pointer transition-colors"
-                      onClick={() => handleEliminarProducto(producto._id)}
+                      onClick={() => handleEliminarProducto(producto.uid)}
                     >
                       Eliminar
                     </ContextMenuItem>
@@ -363,7 +365,6 @@ const Mesas = () => {
             </div>
           </div>
         </div>
-
         {/* Barra de acciones inferior */}
         <div className="mt-4 bg-white rounded-lg shadow-lg border border-[#AAB99A] p-4">
           <div className="flex justify-between items-center">
@@ -405,7 +406,7 @@ const Mesas = () => {
 
       {/* Modal de Ingredientes */}
       <Dialog open={isIngredientModalOpen} onOpenChange={setIsIngredientModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-[#F0F0D7] border border-[#AAB99A] shadow-lg">
+        <DialogContent className="max-w-3xl bg-[#F0F0D7] border border-[#AAB99A] shadow-lg">
           <DialogHeader className="border-b border-[#AAB99A] px-6 py-4">
             <DialogTitle className="text-xl font-medium text-[#727D73]">
               Ingredientes para {selectedProduct?.nombre}
@@ -423,7 +424,7 @@ const Mesas = () => {
                     setPedidoActual(prev => ({
                       ...prev,
                       productos: prev.productos.map(p => {
-                        if (p._id === selectedProduct?._id) {
+                        if (p.uid === selectedProduct?.uid) {
                           const nuevosIngredientes = [...(p.ingredientes || [])];
                           const existeIngrediente = nuevosIngredientes
                             .some(ing => ing.ingrediente._id === ingrediente._id);
@@ -456,6 +457,35 @@ const Mesas = () => {
                   </div>
                 </Card>
               ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para quitar ingredientes */}
+      <Dialog open={isRemoveIngredientModalOpen} onOpenChange={setIsRemoveIngredientModalOpen}>
+        <DialogContent className="max-w-3xl bg-[#F0F0D7] border border-[#AAB99A] shadow-lg">
+          <DialogHeader className="border-b border-[#AAB99A] px-6 py-4">
+            <DialogTitle className="text-xl font-medium text-[#727D73]">
+              Quitar ingredientes de {selectedProduct?.nombre}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-3 gap-4 p-6">
+            {selectedProduct?.ingredientes?.map(({ ingrediente }) => (
+              <Card
+                key={ingrediente._id}
+                className="p-4 cursor-pointer hover:bg-[#D0DDD0] transition-colors border-[#AAB99A] bg-white"
+                onClick={() => handleQuitarIngrediente(selectedProduct, ingrediente._id)}
+              >
+                <div className="font-medium text-[#727D73]">{ingrediente.nombre}</div>
+                <div className="text-sm text-gray-600">
+                  {ingrediente.precio?.toLocaleString('es-ES', { 
+                    style: 'currency', 
+                    currency: 'EUR' 
+                  })}
+                </div>
+              </Card>
+            ))}
           </div>
         </DialogContent>
       </Dialog>
