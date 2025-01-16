@@ -13,7 +13,6 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
-    "@radix-ui/react-tooltip": "^1.1.6",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

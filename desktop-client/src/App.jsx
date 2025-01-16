@@ -4,7 +4,7 @@ import { Login } from './pages/Login';
 import { Personal } from './pages/Personal';
 import { MainHub } from './components/MainHub';
 import { ToastContainer } from 'react-toastify';
-import Mesas from './components/MesasTab/Mesas';
+import MesasPage from './components/SalonesTab/MesasPage';
 
 function App() {
   return (
@@ -23,7 +23,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/main" element={<MainHub />} />
-        <Route path="/mesas/:mesaId" element={<Mesas />} />
+        <Route path="/mesas/:mesaId" element={<MesasPage />} />
       </Routes>
     </BrowserRouter>
   );
