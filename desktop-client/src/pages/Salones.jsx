@@ -62,7 +62,7 @@ export function Salones() {
       </div>
 
       <div className=" flex-1 grid grid-cols-12 gap-4">
-        <div className="col-span-9 bg-white rounded-lg border border-[#AAB99A] p-4">
+      <div className="col-span-9 bg-[rgb(240,240,215)] rounded-lg border border-[#AAB99A] p-4">
           {isLoading ? (
             <div className="h-full flex items-center justify-center">
               Cargando salones...
@@ -76,7 +76,7 @@ export function Salones() {
           )}
         </div>
 
-        <div className="col-span-3 bg-white rounded-lg border border-[#AAB99A] p-4">
+        <div className="col-span-3 bg-[rgb(240,240,215)] rounded-lg border border-[#AAB99A] p-4">
           <div className="text-lg font-medium text-[#727D73] mb-4">Detalle</div>
         </div>
       </div>

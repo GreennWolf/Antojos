@@ -1,4 +1,3 @@
-// Mesas.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMesasBySalon } from '../../services/mesasService';
@@ -9,12 +8,34 @@ export const Mesas = ({ salonId }) => {
   const navigate = useNavigate();
   const [mesas, setMesas] = useState([]);
   const [isLoadingMesas, setIsLoadingMesas] = useState(true);
+  const [mesasConPedido, setMesasConPedido] = useState(new Set());
 
   useEffect(() => {
     if (salonId) {
       cargarMesas(salonId);
     }
   }, [salonId]);
+
+  useEffect(() => {
+    // Verificar pedidos activos en localStorage para cada mesa
+    const mesasActivas = new Set();
+    mesas.forEach(mesa => {
+      const pedidoKey = `mesa_pedido_${mesa._id}`;
+      const pedidoGuardado = localStorage.getItem(pedidoKey);
+      
+      if (pedidoGuardado) {
+        try {
+          const pedido = JSON.parse(pedidoGuardado);
+          if (pedido.productos?.length > 0) {
+            mesasActivas.add(mesa._id);
+          }
+        } catch (error) {
+          console.error('Error al parsear pedido:', error);
+        }
+      }
+    });
+    setMesasConPedido(mesasActivas);
+  }, [mesas]);
 
   const cargarMesas = async (salonId) => {
     try {
@@ -46,8 +67,12 @@ export const Mesas = ({ salonId }) => {
         <div
           key={mesa._id}
           onDoubleClick={() => handleMesaDoubleClick(mesa._id)}
-          className="aspect-square bg-[#D0DDD0] rounded-lg border-2 border-[#727D73] 
-                   flex items-center justify-center cursor-pointer hover:bg-[#D0DDD0]/80"
+          className={`aspect-square rounded-lg border-2 border-[#727D73] 
+                   flex items-center justify-center cursor-pointer transition-colors
+                   ${mesasConPedido.has(mesa._id)
+                     ? 'bg-[#9cc273] hover:bg-[#AAB99A]/80'  // Color más oscuro para mesas con pedido
+                     : 'bg-[#D0DDD0] hover:bg-[#D0DDD0]/80'  // Color original para mesas sin pedido
+                   }`}
         >
           <span className="text-md font-medium text-[#727D73] text-center">
             {mesa.numero}
