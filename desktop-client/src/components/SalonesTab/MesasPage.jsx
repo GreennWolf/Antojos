@@ -65,12 +65,10 @@ export const MesasPage = () => {
   const [isSelectCantidadModalOpen, setIsSelectCantidadModalOpen] = useState(false);
   const [isDescuentoModalOpen, setIsDescuentoModalOpen] = useState(false);
   const [ingredientesDisponibles, setIngredientesDisponibles] = useState([]);
-  const [ingredientesPermitidosActual, setIngredientesPermitidosActual] = useState([]);
   const [selectedIngredientToAdd, setSelectedIngredientToAdd] = useState(null);
   const [selectedCantidadToAdd, setSelectedCantidadToAdd] = useState(1);
   const [descuentoTemp, setDescuentoTemp] = useState(0);
 
-  // Efectos
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(pedidoActual));
@@ -115,44 +113,27 @@ export const MesasPage = () => {
     }
   }, [categoriaActiva]);
 
-  const obtenerIngredientesPermitidos = (producto) => {
-    if (!producto?.subCategoria?._id) return [];
-    const subCategoria = subCategorias.find(sc => sc._id === producto.subCategoria._id);
-    return subCategoria?.ingredientesPermitidos || [];
-  };
-
-  // Función para verificar si un ingrediente es por defecto en el producto
-  const esIngredientePorDefecto = (producto, ingredienteId) => {
-    return producto.ingredientes.some(
-      ing => ing.porDefecto && ing.ingrediente._id === ingredienteId
-    );
-  };
-
-  // Función para obtener el balance actual de un ingrediente
-  const obtenerBalanceIngrediente = (producto, ingredienteId) => {
-    const ingrediente = producto.ingredientes.find(
-      ing => ing.ingrediente._id === ingredienteId
-    );
-  
-    if (!ingrediente) return 0;
-  
-    const cantidadBase = ingrediente.porDefecto ? ingrediente.cantidad : 0;
-    const cantidadAgregada = ingrediente.cantidadAgregada || 0;
-    const cantidadQuitada = ingrediente.cantidadQuitada || 0;
-  
-    return cantidadBase + cantidadAgregada - cantidadQuitada;
+  const obtenerIngredientesProducto = (producto) => {
+    if (!producto?.ingredientes) return [];
+    return producto.ingredientes.map(ing => ({
+      ...ing.ingrediente,
+      cantidadBase: ing.cantidad,
+      unidad: ing.unidad
+    }));
   };
 
   const calcularTotal = (productos, descuentoActual = 0) => {
     const subtotalConIngredientes = productos.reduce((total, p) => {
+      // Precio base del producto
       const precioBase = (p.precio || 0) * p.cantidad;
-      const precioIngredientes = (p.ingredientes || []).reduce((sum, ing) => {
-        if (ing.porDefecto) return sum;
-        const cantidadNeta = (ing.cantidadAgregada || 0) - (ing.cantidadQuitada || 0);
-        if (cantidadNeta <= 0) return sum;
-        return sum + ((ing.ingrediente.precio || 0) * cantidadNeta);
+      
+      // Precio de ingredientes agregados
+      const precioIngredientes = p.ingredientes.reduce((sum, ing) => {
+        if (ing.porDefecto || !ing.cantidadAgregada) return sum;
+        return sum + ((ing.ingrediente.precio || 0) * ing.cantidadAgregada);
       }, 0);
-      return total + (precioBase + precioIngredientes);
+
+      return total + precioBase + precioIngredientes;
     }, 0);
 
     const descuentoCalculado = (subtotalConIngredientes * (descuentoActual / 100)) || 0;
@@ -163,6 +144,7 @@ export const MesasPage = () => {
       total: subtotalConIngredientes - descuentoCalculado
     };
   };
+
   const cargarDatos = async () => {
     try {
       setIsLoading(true);
@@ -217,12 +199,13 @@ export const MesasPage = () => {
     if (!producto) return;
 
     setPedidoActual(prev => {
-      const ingredientesPorDefecto = producto.ingredientes?.map(ing => ({
+      // Inicializamos los ingredientes base del producto
+      const ingredientesIniciales = producto.ingredientes?.map(ing => ({
         ingrediente: ing.ingrediente,
         cantidad: ing.cantidad,
-        porDefecto: true,
         cantidadAgregada: 0,
         cantidadQuitada: 0,
+        porDefecto: true,
         unidad: ing.unidad
       })) || [];
 
@@ -230,7 +213,7 @@ export const MesasPage = () => {
         ...producto, 
         cantidad: 1, 
         uid: Date.now(),
-        ingredientes: ingredientesPorDefecto
+        ingredientes: ingredientesIniciales
       };
 
       const productoIgualIndex = prev.productos.findIndex(p => 
@@ -260,6 +243,26 @@ export const MesasPage = () => {
     });
   };
 
+  const handleAgregarIngrediente = (producto) => {
+    if (!producto) return;
+    
+    setSelectedProduct(producto);
+    
+    // Obtenemos los ingredientes directamente del producto
+    const ingredientesDisponibles = obtenerIngredientesProducto(producto).filter(ingrediente => 
+      ingrediente.active
+    );
+
+    setIngredientesDisponibles(ingredientesDisponibles);
+    
+    if (producto.cantidad > 1) {
+      setSelectedCantidadToAdd(1);
+      setIsSelectCantidadModalOpen(true);
+    } else {
+      setIsIngredientModalOpen(true);
+    }
+  };
+
   const handleConfirmAgregarIngrediente = (cantidad, ingrediente) => {
     if (!selectedProduct || !ingrediente || cantidad < 1) return;
   
@@ -267,43 +270,42 @@ export const MesasPage = () => {
       const nuevosProductos = prev.productos.map(p => {
         if (p.uid !== selectedProduct.uid) return p;
   
-        const ingredienteExistente = p.ingredientes.find(
+        let nuevosIngredientes = [...p.ingredientes];
+        const ingredienteExistente = nuevosIngredientes.find(
           ing => ing.ingrediente._id === ingrediente._id
         );
   
-        let nuevosIngredientes;
         if (ingredienteExistente) {
-          // Si el ingrediente existe, actualizamos sus cantidades
-          nuevosIngredientes = p.ingredientes.map(ing => {
-            if (ing.ingrediente._id !== ingrediente._id) return ing;
-  
-            // Si es un ingrediente por defecto que fue quitado
-            if (ing.porDefecto && ing.cantidadQuitada > 0) {
+          // Si el ingrediente existe y tiene cantidad quitada
+          if (ingredienteExistente.cantidadQuitada > 0) {
+            // Reducimos la cantidad quitada
+            nuevosIngredientes = nuevosIngredientes.map(ing => {
+              if (ing.ingrediente._id !== ingrediente._id) return ing;
               return {
                 ...ing,
-                cantidadQuitada: Math.max(0, ing.cantidadQuitada - cantidad)
+                cantidadQuitada: ing.cantidadQuitada - cantidad
               };
-            }
-  
-            // Si no es por defecto, solo sumamos a la cantidad agregada
-            return {
-              ...ing,
-              cantidadAgregada: (ing.cantidadAgregada || 0) + cantidad
-            };
-          });
+            }).filter(ing => ing.cantidadQuitada > 0 || ing.cantidadAgregada > 0 || ing.porDefecto);
+          } else {
+            // Si no tiene cantidad quitada, agregamos cantidad
+            nuevosIngredientes = nuevosIngredientes.map(ing => {
+              if (ing.ingrediente._id !== ingrediente._id) return ing;
+              return {
+                ...ing,
+                cantidadAgregada: (ing.cantidadAgregada || 0) + cantidad
+              };
+            });
+          }
         } else {
           // Si el ingrediente no existe, lo añadimos como nuevo
-          nuevosIngredientes = [
-            ...p.ingredientes,
-            {
-              ingrediente: ingrediente,
-              cantidad: 0,
-              cantidadAgregada: cantidad,
-              cantidadQuitada: 0,
-              porDefecto: false,
-              unidad: ingrediente.unidad || 'unidad'
-            }
-          ];
+          nuevosIngredientes.push({
+            ingrediente: ingrediente,
+            cantidad: 0,
+            cantidadAgregada: cantidad,
+            cantidadQuitada: 0,
+            porDefecto: false,
+            unidad: ingrediente.unidad
+          });
         }
   
         return {
@@ -322,49 +324,46 @@ export const MesasPage = () => {
     setIsSelectCantidadModalOpen(false);
     setIsIngredientModalOpen(false);
     setSelectedIngredientToAdd(null);
-    setSelectedCantidadToAdd(1);
   };
 
-  const handleQuitarIngrediente = (producto, ingredienteId, cantidad = 1) => {
+  const handleQuitarIngrediente = (producto, ingredienteId) => {
     if (!producto || !ingredienteId) return;
-
+  
     setPedidoActual(prev => {
       const nuevosProductos = prev.productos.map(p => {
         if (p.uid !== producto.uid) return p;
-
-        const nuevosIngredientes = p.ingredientes.map(ing => {
-          if (ing.ingrediente._id !== ingredienteId) return ing;
-
-          // Si es un ingrediente por defecto
-          if (ing.porDefecto) {
+  
+        let nuevosIngredientes = [...p.ingredientes];
+        const ingredienteExistente = nuevosIngredientes.find(
+          ing => ing.ingrediente._id === ingredienteId && ing.cantidadAgregada > 0
+        );
+  
+        if (ingredienteExistente) {
+          // Si hay cantidad agregada, la reducimos
+          nuevosIngredientes = nuevosIngredientes.map(ing => {
+            if (ing.ingrediente._id !== ingredienteId) return ing;
             return {
               ...ing,
-              cantidadQuitada: (ing.cantidadQuitada || 0) + cantidad
+              cantidadAgregada: ing.cantidadAgregada - 1
             };
-          }
-          
-          // Si es un ingrediente agregado posteriormente
-          const cantidadAgregadaActual = ing.cantidadAgregada || 0;
-          const cantidadQuitadaActual = ing.cantidadQuitada || 0;
-          const nuevaCantidadQuitada = cantidadQuitadaActual + cantidad;
-
-          // Si se han quitado todos los ingredientes agregados, eliminamos el registro
-          if (nuevaCantidadQuitada >= cantidadAgregadaActual) {
-            return null;
-          }
-
-          return {
-            ...ing,
-            cantidadQuitada: nuevaCantidadQuitada
-          };
-        }).filter(Boolean); // Eliminamos los registros null
-
+          }).filter(ing => ing.cantidadAgregada > 0 || ing.porDefecto); // Mantenemos solo los que tienen cantidad o son por defecto
+        } else {
+          // Si no hay cantidad agregada, marcamos como quitado
+          nuevosIngredientes = nuevosIngredientes.map(ing => {
+            if (ing.ingrediente._id !== ingredienteId) return ing;
+            return {
+              ...ing,
+              cantidadQuitada: (ing.cantidadQuitada || 0) + 1
+            };
+          });
+        }
+  
         return {
           ...p,
           ingredientes: nuevosIngredientes
         };
       });
-
+  
       const totales = calcularTotal(nuevosProductos, prev.descuento);
       return {
         productos: nuevosProductos,
@@ -373,37 +372,6 @@ export const MesasPage = () => {
     });
     
     setIsRemoveIngredientModalOpen(false);
-  };
-
-  const handleAgregarIngrediente = (producto) => {
-    if (!producto) return;
-    
-    setSelectedProduct(producto);
-    const ingredientesPermitidos = obtenerIngredientesPermitidos(producto);
-    
-    // Filtramos los ingredientes que podemos agregar
-    const ingredientesDisponibles = ingredientesPermitidos.filter(ingrediente => {
-      if (!ingrediente.active) return false;
-  
-      const ingredienteExistente = producto.ingredientes?.find(
-        ing => ing.ingrediente._id === ingrediente._id
-      );
-  
-      // Si no existe o no es por defecto, siempre lo podemos agregar
-      if (!ingredienteExistente || !ingredienteExistente.porDefecto) return true;
-  
-      // Si es por defecto, solo lo mostramos si tiene cantidadQuitada
-      return ingredienteExistente.cantidadQuitada > 0;
-    });
-  
-    setIngredientesDisponibles(ingredientesDisponibles);
-    
-    if (producto.cantidad > 1) {
-      setSelectedCantidadToAdd(1);
-      setIsSelectCantidadModalOpen(true);
-    } else {
-      setIsIngredientModalOpen(true);
-    }
   };
 
   const handleUpdateCantidad = (uid, nuevaCantidad) => {
@@ -476,6 +444,7 @@ export const MesasPage = () => {
   if (!mesa) {
     return <div className="flex items-center justify-center h-screen">Mesa no encontrada</div>;
   }
+
   return (
     <div className="min-h-screen bg-[#F0F0D7]">
       {/* Header */}
@@ -575,44 +544,31 @@ export const MesasPage = () => {
                         </div>
                         {(producto.ingredientes?.length > 0) && (
                           <div className="text-xs space-y-0.5 mt-1">
-                            {/* Ingredientes añadidos y modificados */}
-{producto.ingredientes
-  .map((ing, idx) => {
-    const cantidadBase = ing.porDefecto ? ing.cantidad : 0;
-    const cantidadAgregada = ing.cantidadAgregada || 0;
-    const cantidadQuitada = ing.cantidadQuitada || 0;
-    const cantidadNeta = cantidadBase + cantidadAgregada - cantidadQuitada;
-
-    // Si es ingrediente por defecto y está quitado
-    if (ing.porDefecto && cantidadQuitada > 0) {
-      return (
-        <div key={`${ing.ingrediente._id}-${idx}`} className="text-red-600">
-          - {ing.ingrediente.nombre} x{cantidadQuitada}
-        </div>
-      );
-    }
-
-    // Si tiene cantidad agregada (no por defecto)
-    if (!ing.porDefecto && cantidadAgregada > 0) {
-      return (
-        <div key={`${ing.ingrediente._id}-${idx}`} className="text-green-600">
-          + {ing.ingrediente.nombre} x{cantidadAgregada} (
-          {(ing.ingrediente.precio || 0).toLocaleString('es-ES', {
-            style: 'currency',
-            currency: 'EUR'
-          })}
-          {cantidadAgregada > 1 ? ` x ${cantidadAgregada} = ${((ing.ingrediente.precio || 0) * cantidadAgregada).toLocaleString('es-ES', {
-            style: 'currency',
-            currency: 'EUR'
-          })}` : ''}
-          )
-        </div>
-      );
-    }
-
-    return null;
-  })
-  .filter(Boolean)}
+                            {/* Ingredientes agregados posteriormente */}
+                            {producto.ingredientes
+                              .filter(ing => (ing.cantidadAgregada || 0) > 0)
+                              .map((ing, idx) => (
+                                <div key={`${ing.ingrediente._id}-agregado-${idx}`} className="text-green-600">
+                                  + {ing.ingrediente.nombre} x{ing.cantidadAgregada} (
+                                  {(ing.ingrediente.precio || 0).toLocaleString('es-ES', {
+                                    style: 'currency',
+                                    currency: 'EUR'
+                                  })}
+                                  {ing.cantidadAgregada > 1 ? ` x ${ing.cantidadAgregada} = ${((ing.ingrediente.precio || 0) * ing.cantidadAgregada).toLocaleString('es-ES', {
+                                    style: 'currency',
+                                    currency: 'EUR'
+                                  })}` : ''}
+                                  )
+                                </div>
+                              ))}
+                            {/* Ingredientes quitados */}
+                            {producto.ingredientes
+                              .filter(ing => (ing.cantidadQuitada || 0) > 0)
+                              .map((ing, idx) => (
+                                <div key={`${ing.ingrediente._id}-quitado-${idx}`} className="text-red-600">
+                                  - {ing.ingrediente.nombre} x{ing.cantidadQuitada} {ing.unidad}
+                                </div>
+                              ))}
                           </div>
                         )}
                       </div>
@@ -659,6 +615,7 @@ export const MesasPage = () => {
               </ContextMenu>
             ))}
           </div>
+
           <div className="p-2 border-t border-[#AAB99A] bg-[#F0F0D7]">
             <div className="space-y-1">
               <div className="flex justify-between items-center text-sm text-[#727D73]">
@@ -745,13 +702,12 @@ export const MesasPage = () => {
         onOpenChange={(open) => {
           setIsSelectCantidadModalOpen(open);
           if (!open) setSelectedIngredientToAdd(null);
-          if (!open) setSelectedCantidadToAdd(1);
         }}
       >
         <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A]">
           <DialogHeader>
             <DialogTitle className="text-[#727D73]">
-              ¿Cuántos {selectedIngredientToAdd?.nombre || 'ingredientes'} desea agregar?
+              ¿Cuántas unidades de {selectedIngredientToAdd?.nombre || 'ingrediente'} desea agregar?
             </DialogTitle>
           </DialogHeader>
           
@@ -761,7 +717,7 @@ export const MesasPage = () => {
               <div className="text-sm text-gray-600">Cantidad del producto: {selectedProduct?.cantidad || 0}</div>
             </div>
             <div className="grid grid-cols-4 gap-4">
-              {Array.from({ length: selectedProduct?.cantidad || 0 }, (_, i) => (
+              {Array.from({ length: 10 }, (_, i) => (
                 <button
                   key={i + 1}
                   onClick={() => handleConfirmAgregarIngrediente(i + 1, selectedIngredientToAdd)}
@@ -788,27 +744,17 @@ export const MesasPage = () => {
           </DialogHeader>
           
           <div className="grid grid-cols-4 gap-2 p-4">
-            {(selectedProduct ? obtenerIngredientesPermitidos(selectedProduct) : [])
-              .filter(ingrediente => {
-                if (!ingrediente.active) return false;
-                // Obtener el balance actual del ingrediente
-                const balanceActual = obtenerBalanceIngrediente(selectedProduct, ingrediente._id);
-                // Permitir agregar si no está en el producto o si es un ingrediente quitado
-                return balanceActual <= 0;
-              })
+            {(selectedProduct ? obtenerIngredientesProducto(selectedProduct) : [])
+              .filter(ingrediente => ingrediente.active)
               .map(ingrediente => (
                 <button
                   key={ingrediente._id}
                   className="p-2 bg-white rounded border border-[#AAB99A] text-[#727D73] 
                            hover:bg-[#D0DDD0] transition-colors text-sm flex flex-col items-center"
                   onClick={() => {
-                    if (selectedProduct?.cantidad > 1) {
-                      setSelectedIngredientToAdd(ingrediente);
-                      setIsSelectCantidadModalOpen(true);
-                      setIsIngredientModalOpen(false);
-                    } else {
-                      handleConfirmAgregarIngrediente(1, ingrediente);
-                    }
+                    setSelectedIngredientToAdd(ingrediente);
+                    setIsSelectCantidadModalOpen(true);
+                    setIsIngredientModalOpen(false);
                   }}
                 >
                   <span>{ingrediente.nombre}</span>
@@ -816,7 +762,7 @@ export const MesasPage = () => {
                     ({(ingrediente.precio || 0).toLocaleString('es-ES', {
                       style: 'currency',
                       currency: 'EUR'
-                    })} / {ingrediente.unidad || 'unidad'})
+                    })} / {ingrediente.unidad})
                   </span>
                 </button>
               ))}
@@ -824,43 +770,35 @@ export const MesasPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal para quitar ingredientes */}
-      <Dialog 
-        open={isRemoveIngredientModalOpen} 
-        onOpenChange={setIsRemoveIngredientModalOpen}
-      >
-        <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A]">
-          <DialogHeader>
-            <DialogTitle className="text-[#727D73]">
-              Quitar ingredientes de {selectedProduct?.nombre}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="grid grid-cols-4 gap-2 p-4">
-            {selectedProduct?.ingredientes
-              ?.filter(ing => {
-                const balanceActual = obtenerBalanceIngrediente(selectedProduct, ing.ingrediente._id);
-                return balanceActual > 0; // Solo mostrar ingredientes que aún tienen cantidad positiva
-              })
-              .map(ing => (
-                <button
-                  key={ing.ingrediente._id}
-                  className="p-2 bg-white rounded border border-[#AAB99A] text-[#727D73] 
-                           hover:bg-[#D0DDD0] transition-colors text-sm flex flex-col items-center gap-1"
-                  onClick={() => handleQuitarIngrediente(selectedProduct, ing.ingrediente._id)}
-                >
-                  <span>{ing.ingrediente.nombre}</span>
-                  <span className="text-xs text-gray-500">
-                    {obtenerBalanceIngrediente(selectedProduct, ing.ingrediente._id)} {ing.unidad || 'unidad'}
-                  </span>
-                  {ing.porDefecto && (
-                    <span className="text-xs text-blue-600">(Por defecto)</span>
-                  )}
-                </button>
-              ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+     {/* Modal para quitar ingredientes */}
+<Dialog 
+  open={isRemoveIngredientModalOpen} 
+  onOpenChange={setIsRemoveIngredientModalOpen}
+>
+  <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A]">
+    <DialogHeader>
+      <DialogTitle className="text-[#727D73]">
+        Quitar ingredientes de {selectedProduct?.nombre}
+      </DialogTitle>
+    </DialogHeader>
+    
+    <div className="grid grid-cols-4 gap-2 p-4">
+      {selectedProduct?.ingredientes?.map(ing => (
+        <button
+          key={ing.ingrediente._id}
+          className="p-2 bg-white rounded border border-[#AAB99A] text-[#727D73] 
+                   hover:bg-[#D0DDD0] transition-colors text-sm flex flex-col items-center gap-1"
+          onClick={() => handleQuitarIngrediente(selectedProduct, ing.ingrediente._id)}
+        >
+          <span>{ing.ingrediente.nombre}</span>
+          <span className="text-xs text-gray-500">
+            ({ing.unidad})
+          </span>
+        </button>
+      ))}
+    </div>
+  </DialogContent>
+</Dialog>
 
       {/* Modal de descuento */}
       <Dialog 

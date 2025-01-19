@@ -1,0 +1,78 @@
+[33mcommit 084a0901445d6bcc7ae2c776a8d219c2893489be[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: GreennWolf <juanmanuelrc@live.com.ar>
+Date:   Sun Jan 19 11:25:47 2025 +0100
+
+    edicion de ingredientes
+
+[33mcommit 41241c3ee92e7e955d24aa3a4bb8f70caffde3ce[m
+Author: Jose Rodriguez <128047100+JoseRodriguezCa@users.noreply.github.com>
+Date:   Fri Jan 17 23:57:24 2025 +0100
+
+    Cambio en mesas y bg salones
+
+[33mcommit 926419bae76e45bcdc22a613e3898e272d2d1098[m
+Author: GreennWolf <juanmanuelrc@live.com.ar>
+Date:   Thu Jan 16 22:43:56 2025 +0100
+
+    mejora de mesas y salones
+
+[33mcommit 5c118439a7e0ab57cabd38c783a2c1aa6bf6d163[m
+Author: Jose Rodriguez <128047100+JoseRodriguezCa@users.noreply.github.com>
+Date:   Thu Jan 16 21:21:27 2025 +0100
+
+    cambios en mesas y creacion del menu context
+
+[33mcommit ece23a0ec93bbe769e5cc5a10dd95386477cc58c[m
+Author: Jose Rodriguez <128047100+JoseRodriguezCa@users.noreply.github.com>
+Date:   Thu Jan 16 17:32:10 2025 +0100
+
+    cambios componente mesas
+
+[33mcommit 669216b469ac08e5ae74c8cf50562b92df37ec5f[m
+Author: Jose Rodriguez <128047100+JoseRodriguezCa@users.noreply.github.com>
+Date:   Wed Jan 15 12:44:45 2025 +0100
+
+    Cambio en ingredientes, crear Componente mesas y salones
+
+[33mcommit 02fd546c3343afbf2a4383d4326d160484ef0cee[m
+Author: Jose Rodriguez <128047100+JoseRodriguezCa@users.noreply.github.com>
+Date:   Tue Jan 14 21:10:48 2025 +0100
+
+    Cambio en componente Producto e Ingredientes agregar modal de detalles y funciones
+
+[33mcommit 387ee3e6e23e158b3c75d43bf07245103c71cc45[m
+Merge: 84df348 4ce343b
+Author: GreennWolf <juanmanuelrc@live.com.ar>
+Date:   Mon Jan 13 21:16:16 2025 +0100
+
+    Merge branch 'master' of https://github.com/GreennWolf/Antojos
+
+[33mcommit 84df348e31020242de0a7e6777459c959a6a40cb[m
+Author: GreennWolf <juanmanuelrc@live.com.ar>
+Date:   Mon Jan 13 21:10:28 2025 +0100
+
+    ingredientes.jsx cambiado
+
+[33mcommit 4ce343b11a8047cbbb5304dd6cdb7593572dcf08[m[33m ([m[1;32mmain[m[33m)[m
+Author: Jose Rodriguez <128047100+JoseRodriguezCa@users.noreply.github.com>
+Date:   Mon Jan 13 19:59:46 2025 +0100
+
+    product create, change ingredients
+
+[33mcommit cf46f3c33fcd828ea6ecd2d2ff41f4eea7230da2[m
+Author: Jose Rodriguez <128047100+JoseRodriguezCa@users.noreply.github.com>
+Date:   Sun Jan 12 17:49:46 2025 +0100
+
+    descripción de los cambios realizados
+
+[33mcommit 650050ef37292192df98a0859015e64dbe7093fc[m
+Author: Jose Rodriguez <128047100+JoseRodriguezCa@users.noreply.github.com>
+Date:   Sun Jan 5 17:31:04 2025 +0100
+
+    first commit
+
+[33mcommit 3b459cbc2985f0f93c42b9fb228ef03d56e427ff[m
+Author: Jose Rodriguez <128047100+JoseRodriguezCa@users.noreply.github.com>
+Date:   Sun Jan 5 17:29:35 2025 +0100
+
+    first commit
