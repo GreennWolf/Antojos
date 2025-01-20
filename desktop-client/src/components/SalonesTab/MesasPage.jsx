@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
+import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
@@ -13,12 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Card } from '@/components/ui/card';
-import { getMesaById, updateMesa } from '../../services/mesasService';
-import { getSubCategorias } from '../../services/subCategoriasService';
-import { getProductos } from '../../services/productosService';
-import { getCategorias } from '../../services/categoriasService';
-import { toast } from 'react-toastify';
+import { Card } from "@/components/ui/card";
+import { getMesaById, updateMesa } from "../../services/mesasService";
+import { getSubCategorias } from "../../services/subCategoriasService";
+import { getProductos } from "../../services/productosService";
+import { getCategorias } from "../../services/categoriasService";
+import { toast } from "react-toastify";
 
 export const MesasPage = () => {
   const { mesaId } = useParams();
@@ -29,31 +30,34 @@ export const MesasPage = () => {
   const [mesa, setMesa] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Estados para categorías y productos
   const [categorias, setCategorias] = useState([]);
   const [subCategorias, setSubCategorias] = useState([]);
   const [productos, setProductos] = useState([]);
   const [categoriaActiva, setCategoriaActiva] = useState(null);
   const [subCategoriaActiva, setSubCategoriaActiva] = useState(null);
-  
+  const [currentAction, setCurrentAction] = useState(null); // 'add' o 'remove'
+
   // Estado para el pedido actual
   const [pedidoActual, setPedidoActual] = useState(() => {
     try {
       const savedPedido = localStorage.getItem(STORAGE_KEY);
-      return savedPedido ? JSON.parse(savedPedido) : {
-        productos: [],
-        subtotal: 0,
-        descuento: 0,
-        total: 0
-      };
+      return savedPedido
+        ? JSON.parse(savedPedido)
+        : {
+            productos: [],
+            subtotal: 0,
+            descuento: 0,
+            total: 0,
+          };
     } catch (error) {
-      console.error('Error al cargar pedido del localStorage:', error);
+      console.error("Error al cargar pedido del localStorage:", error);
       return {
         productos: [],
         subtotal: 0,
         descuento: 0,
-        total: 0
+        total: 0,
       };
     }
   });
@@ -61,8 +65,10 @@ export const MesasPage = () => {
   // Estados para modales e ingredientes
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isIngredientModalOpen, setIsIngredientModalOpen] = useState(false);
-  const [isRemoveIngredientModalOpen, setIsRemoveIngredientModalOpen] = useState(false);
-  const [isSelectCantidadModalOpen, setIsSelectCantidadModalOpen] = useState(false);
+  const [isRemoveIngredientModalOpen, setIsRemoveIngredientModalOpen] =
+    useState(false);
+  const [isSelectCantidadModalOpen, setIsSelectCantidadModalOpen] =
+    useState(false);
   const [isDescuentoModalOpen, setIsDescuentoModalOpen] = useState(false);
   const [ingredientesDisponibles, setIngredientesDisponibles] = useState([]);
   const [selectedIngredientToAdd, setSelectedIngredientToAdd] = useState(null);
@@ -73,20 +79,20 @@ export const MesasPage = () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(pedidoActual));
     } catch (error) {
-      console.error('Error al guardar pedido en localStorage:', error);
-      toast.error('Error al guardar el pedido');
+      console.error("Error al guardar pedido en localStorage:", error);
+      toast.error("Error al guardar el pedido");
     }
   }, [pedidoActual, mesaId]);
 
   useEffect(() => {
     try {
-      const userStored = localStorage.getItem('user');
+      const userStored = localStorage.getItem("user");
       if (userStored) {
         setCurrentUser(JSON.parse(userStored));
       }
     } catch (error) {
-      console.error('Error al cargar usuario:', error);
-      toast.error('Error al cargar información del usuario');
+      console.error("Error al cargar usuario:", error);
+      toast.error("Error al cargar información del usuario");
     }
   }, []);
 
@@ -96,7 +102,9 @@ export const MesasPage = () => {
 
   useEffect(() => {
     if (subCategoriaActiva) {
-      const subCategoria = subCategorias.find(sc => sc._id === subCategoriaActiva);
+      const subCategoria = subCategorias.find(
+        (sc) => sc._id === subCategoriaActiva
+      );
       if (subCategoria) {
         setSubCategoriaActiva(subCategoria._id);
       }
@@ -105,9 +113,9 @@ export const MesasPage = () => {
 
   useEffect(() => {
     const primeraSubCategoria = subCategorias.find(
-      sc => sc.categoria._id === categoriaActiva
+      (sc) => sc.categoria._id === categoriaActiva
     );
-    
+
     if (primeraSubCategoria) {
       setSubCategoriaActiva(primeraSubCategoria._id);
     }
@@ -115,10 +123,10 @@ export const MesasPage = () => {
 
   const obtenerIngredientesProducto = (producto) => {
     if (!producto?.ingredientes) return [];
-    return producto.ingredientes.map(ing => ({
+    return producto.ingredientes.map((ing) => ({
       ...ing.ingrediente,
       cantidadBase: ing.cantidad,
-      unidad: ing.unidad
+      unidad: ing.unidad,
     }));
   };
 
@@ -127,17 +135,24 @@ export const MesasPage = () => {
       // Precio base del producto
       const precioBase = (p.precio || 0) * p.cantidad;
       
-      // Precio de ingredientes agregados
-      const precioIngredientes = p.ingredientes.reduce((sum, ing) => {
-        if (ing.porDefecto || !ing.cantidadAgregada) return sum;
-        return sum + ((ing.ingrediente.precio || 0) * ing.cantidadAgregada);
-      }, 0);
-
+      // Precio de ingredientes
+      const precioIngredientes = p.ingredientes?.reduce((sum, ing) => {
+        // Si el ingrediente está quitado, no sumamos su precio
+        if (ing.cantidadQuitada) return sum;
+        
+        // Si es ingrediente agregado posteriormente
+        if (ing.cantidadAgregada) {
+          return sum + ((ing.ingrediente.precio || 0) * ing.cantidadAgregada);
+        }
+        
+        return sum;
+      }, 0) || 0;
+  
       return total + precioBase + precioIngredientes;
     }, 0);
-
+  
     const descuentoCalculado = (subtotalConIngredientes * (descuentoActual / 100)) || 0;
-
+  
     return {
       subtotal: subtotalConIngredientes,
       descuento: descuentoActual,
@@ -148,32 +163,35 @@ export const MesasPage = () => {
   const cargarDatos = async () => {
     try {
       setIsLoading(true);
-      const [mesaData, categoriasData, subCategoriasData, productosData] = await Promise.all([
-        getMesaById(mesaId),
-        getCategorias(),
-        getSubCategorias(),
-        getProductos()
-      ]);
+      const [mesaData, categoriasData, subCategoriasData, productosData] =
+        await Promise.all([
+          getMesaById(mesaId),
+          getCategorias(),
+          getSubCategorias(),
+          getProductos(),
+        ]);
 
-      if (!mesaData) throw new Error('No se encontró la mesa');
+      if (!mesaData) throw new Error("No se encontró la mesa");
 
       setMesa(mesaData);
-      
-      const categoriasActivas = categoriasData.filter(cat => 
-        cat.active && cat.ingrediente === false
+
+      const categoriasActivas = categoriasData.filter(
+        (cat) => cat.active && cat.ingrediente === false
       );
       setCategorias(categoriasActivas);
-      
-      const subCategoriasActivas = subCategoriasData.filter(subcat => subcat.active);
+
+      const subCategoriasActivas = subCategoriasData.filter(
+        (subcat) => subcat.active
+      );
       setSubCategorias(subCategoriasActivas);
-      setProductos(productosData.filter(prod => prod.active));
+      setProductos(productosData.filter((prod) => prod.active));
 
       if (categoriasActivas.length > 0) {
         setCategoriaActiva(categoriasActivas[0]._id);
         const primeraSubCategoria = subCategoriasActivas.find(
-          sc => sc.categoria._id === categoriasActivas[0]._id
+          (sc) => sc.categoria._id === categoriasActivas[0]._id
         );
-        
+
         if (primeraSubCategoria) {
           setSubCategoriaActiva(primeraSubCategoria._id);
         }
@@ -183,13 +201,13 @@ export const MesasPage = () => {
         const mesaActualizada = {
           ...mesaData,
           camarero: currentUser.id,
-          nombreCamarero: currentUser.nombre
+          nombreCamarero: currentUser.nombre,
         };
         await updateMesa(mesaId, mesaActualizada);
       }
     } catch (error) {
-      console.error('Error al cargar datos:', error);
-      toast.error('Error al cargar los datos');
+      console.error("Error al cargar datos:", error);
+      toast.error("Error al cargar los datos");
     } finally {
       setIsLoading(false);
     }
@@ -198,39 +216,39 @@ export const MesasPage = () => {
   const handleAddProducto = (producto) => {
     if (!producto) return;
 
-    setPedidoActual(prev => {
+    setPedidoActual((prev) => {
       // Inicializamos los ingredientes base del producto
-      const ingredientesIniciales = producto.ingredientes?.map(ing => ({
-        ingrediente: ing.ingrediente,
-        cantidad: ing.cantidad,
-        cantidadAgregada: 0,
-        cantidadQuitada: 0,
-        porDefecto: true,
-        unidad: ing.unidad
-      })) || [];
+      const ingredientesIniciales =
+        producto.ingredientes?.map((ing) => ({
+          ingrediente: ing.ingrediente,
+          cantidad: ing.cantidad,
+          cantidadAgregada: 0,
+          cantidadQuitada: 0,
+          porDefecto: true,
+          unidad: ing.unidad,
+        })) || [];
 
-      const nuevoProducto = { 
-        ...producto, 
-        cantidad: 1, 
+      const nuevoProducto = {
+        ...producto,
+        cantidad: 1,
         uid: Date.now(),
-        ingredientes: ingredientesIniciales
+        ingredientes: ingredientesIniciales,
       };
 
-      const productoIgualIndex = prev.productos.findIndex(p => 
-        p.nombre === producto.nombre && 
-        sonIngredientesIguales(p.ingredientes, nuevoProducto.ingredientes)
+      const productoIgualIndex = prev.productos.findIndex(
+        (p) =>
+          p.nombre === producto.nombre &&
+          sonIngredientesIguales(p.ingredientes, nuevoProducto.ingredientes)
       );
 
       if (productoIgualIndex !== -1) {
-        const nuevosProductos = prev.productos.map((p, index) => 
-          index === productoIgualIndex 
-            ? { ...p, cantidad: p.cantidad + 1 }
-            : p
+        const nuevosProductos = prev.productos.map((p, index) =>
+          index === productoIgualIndex ? { ...p, cantidad: p.cantidad + 1 } : p
         );
         const totales = calcularTotal(nuevosProductos, prev.descuento);
         return {
           productos: nuevosProductos,
-          ...totales
+          ...totales,
         };
       }
 
@@ -238,61 +256,58 @@ export const MesasPage = () => {
       const totales = calcularTotal(nuevosProductos, prev.descuento);
       return {
         productos: nuevosProductos,
-        ...totales
+        ...totales,
       };
     });
   };
 
   const handleAgregarIngrediente = (producto) => {
     if (!producto) return;
-    
-    setSelectedProduct(producto);
-    
-    // Obtenemos los ingredientes directamente del producto
-    const ingredientesDisponibles = obtenerIngredientesProducto(producto).filter(ingrediente => 
-      ingrediente.active
-    );
 
-    setIngredientesDisponibles(ingredientesDisponibles);
-    
-    if (producto.cantidad > 1) {
-      setSelectedCantidadToAdd(1);
-      setIsSelectCantidadModalOpen(true);
-    } else {
-      setIsIngredientModalOpen(true);
-    }
+    setSelectedProduct(producto);
+
+    // Primero mostramos el modal de selección de ingredientes
+    setIsIngredientModalOpen(true);
+    setCurrentAction("add");
   };
 
   const handleConfirmAgregarIngrediente = (cantidad, ingrediente) => {
     if (!selectedProduct || !ingrediente || cantidad < 1) return;
-  
-    setPedidoActual(prev => {
-      const nuevosProductos = prev.productos.map(p => {
+
+    setPedidoActual((prev) => {
+      const nuevosProductos = prev.productos.map((p) => {
         if (p.uid !== selectedProduct.uid) return p;
-  
+
         let nuevosIngredientes = [...p.ingredientes];
         const ingredienteExistente = nuevosIngredientes.find(
-          ing => ing.ingrediente._id === ingrediente._id
+          (ing) => ing.ingrediente._id === ingrediente._id
         );
-  
+
         if (ingredienteExistente) {
           // Si el ingrediente existe y tiene cantidad quitada
           if (ingredienteExistente.cantidadQuitada > 0) {
             // Reducimos la cantidad quitada
-            nuevosIngredientes = nuevosIngredientes.map(ing => {
-              if (ing.ingrediente._id !== ingrediente._id) return ing;
-              return {
-                ...ing,
-                cantidadQuitada: ing.cantidadQuitada - cantidad
-              };
-            }).filter(ing => ing.cantidadQuitada > 0 || ing.cantidadAgregada > 0 || ing.porDefecto);
+            nuevosIngredientes = nuevosIngredientes
+              .map((ing) => {
+                if (ing.ingrediente._id !== ingrediente._id) return ing;
+                return {
+                  ...ing,
+                  cantidadQuitada: ing.cantidadQuitada - cantidad,
+                };
+              })
+              .filter(
+                (ing) =>
+                  ing.cantidadQuitada > 0 ||
+                  ing.cantidadAgregada > 0 ||
+                  ing.porDefecto
+              );
           } else {
             // Si no tiene cantidad quitada, agregamos cantidad
-            nuevosIngredientes = nuevosIngredientes.map(ing => {
+            nuevosIngredientes = nuevosIngredientes.map((ing) => {
               if (ing.ingrediente._id !== ingrediente._id) return ing;
               return {
                 ...ing,
-                cantidadAgregada: (ing.cantidadAgregada || 0) + cantidad
+                cantidadAgregada: (ing.cantidadAgregada || 0) + cantidad,
               };
             });
           }
@@ -304,130 +319,142 @@ export const MesasPage = () => {
             cantidadAgregada: cantidad,
             cantidadQuitada: 0,
             porDefecto: false,
-            unidad: ingrediente.unidad
+            unidad: ingrediente.unidad,
           });
         }
-  
+
         return {
           ...p,
-          ingredientes: nuevosIngredientes
+          ingredientes: nuevosIngredientes,
         };
       });
-  
+
       const totales = calcularTotal(nuevosProductos, prev.descuento);
       return {
         productos: nuevosProductos,
-        ...totales
+        ...totales,
       };
     });
-  
+
     setIsSelectCantidadModalOpen(false);
     setIsIngredientModalOpen(false);
     setSelectedIngredientToAdd(null);
   };
 
-  const handleQuitarIngrediente = (producto, ingredienteId) => {
+  const handleQuitarIngrediente = (producto, ingredienteId, cantidad = 1) => {
     if (!producto || !ingredienteId) return;
-  
-    setPedidoActual(prev => {
-      const nuevosProductos = prev.productos.map(p => {
+
+    setPedidoActual((prev) => {
+      const nuevosProductos = prev.productos.map((p) => {
         if (p.uid !== producto.uid) return p;
-  
+
         let nuevosIngredientes = [...p.ingredientes];
         const ingredienteExistente = nuevosIngredientes.find(
-          ing => ing.ingrediente._id === ingredienteId && ing.cantidadAgregada > 0
+          (ing) =>
+            ing.ingrediente._id === ingredienteId && ing.cantidadAgregada > 0
         );
-  
+
         if (ingredienteExistente) {
           // Si hay cantidad agregada, la reducimos
-          nuevosIngredientes = nuevosIngredientes.map(ing => {
-            if (ing.ingrediente._id !== ingredienteId) return ing;
-            return {
-              ...ing,
-              cantidadAgregada: ing.cantidadAgregada - 1
-            };
-          }).filter(ing => ing.cantidadAgregada > 0 || ing.porDefecto); // Mantenemos solo los que tienen cantidad o son por defecto
+          nuevosIngredientes = nuevosIngredientes
+            .map((ing) => {
+              if (ing.ingrediente._id !== ingredienteId) return ing;
+              return {
+                ...ing,
+                cantidadAgregada: ing.cantidadAgregada - cantidad,
+              };
+            })
+            .filter((ing) => ing.cantidadAgregada > 0 || ing.porDefecto);
         } else {
           // Si no hay cantidad agregada, marcamos como quitado
-          nuevosIngredientes = nuevosIngredientes.map(ing => {
+          nuevosIngredientes = nuevosIngredientes.map((ing) => {
             if (ing.ingrediente._id !== ingredienteId) return ing;
             return {
               ...ing,
-              cantidadQuitada: (ing.cantidadQuitada || 0) + 1
+              cantidadQuitada: (ing.cantidadQuitada || 0) + cantidad,
             };
           });
         }
-  
+
         return {
           ...p,
-          ingredientes: nuevosIngredientes
+          ingredientes: nuevosIngredientes,
         };
       });
-  
+
       const totales = calcularTotal(nuevosProductos, prev.descuento);
       return {
         productos: nuevosProductos,
-        ...totales
+        ...totales,
       };
     });
-    
-    setIsRemoveIngredientModalOpen(false);
+
+    setIsSelectCantidadModalOpen(false);
   };
 
   const handleUpdateCantidad = (uid, nuevaCantidad) => {
     if (nuevaCantidad < 1) return;
-    
-    setPedidoActual(prev => {
-      const nuevosProductos = prev.productos.map(p => 
+
+    setPedidoActual((prev) => {
+      const nuevosProductos = prev.productos.map((p) =>
         p.uid === uid ? { ...p, cantidad: nuevaCantidad } : p
       );
       const totales = calcularTotal(nuevosProductos, prev.descuento);
       return {
         productos: nuevosProductos,
-        ...totales
+        ...totales,
       };
     });
   };
 
   const handleEliminarProducto = (uid) => {
-    setPedidoActual(prev => {
-      const nuevosProductos = prev.productos.filter(p => p.uid !== uid);
+    setPedidoActual((prev) => {
+      const nuevosProductos = prev.productos.filter((p) => p.uid !== uid);
       const totales = calcularTotal(nuevosProductos, prev.descuento);
       return {
         productos: nuevosProductos,
-        ...totales
+        ...totales,
       };
     });
   };
 
   const handleAplicarDescuento = () => {
-    setPedidoActual(prev => {
+    setPedidoActual((prev) => {
       const totales = calcularTotal(prev.productos, descuentoTemp);
       return {
         ...prev,
-        ...totales
+        ...totales,
       };
     });
     setIsDescuentoModalOpen(false);
   };
 
   const sonIngredientesIguales = (ingredientes1, ingredientes2) => {
-    if (!Array.isArray(ingredientes1) || !Array.isArray(ingredientes2)) return false;
+    if (!Array.isArray(ingredientes1) || !Array.isArray(ingredientes2))
+      return false;
     if (ingredientes1.length !== ingredientes2.length) return false;
 
-    const ingredientesSorted1 = [...ingredientes1].sort((a, b) => 
-      a?.ingrediente?._id?.localeCompare(b?.ingrediente?._id || '') || 0
+    const ingredientesSorted1 = [...ingredientes1].sort(
+      (a, b) =>
+        a?.ingrediente?._id?.localeCompare(b?.ingrediente?._id || "") || 0
     );
-    const ingredientesSorted2 = [...ingredientes2].sort((a, b) => 
-      a?.ingrediente?._id?.localeCompare(b?.ingrediente?._id || '') || 0
+    const ingredientesSorted2 = [...ingredientes2].sort(
+      (a, b) =>
+        a?.ingrediente?._id?.localeCompare(b?.ingrediente?._id || "") || 0
     );
 
     return ingredientesSorted1.every((ing, index) => {
       const ing2 = ingredientesSorted2[index];
       if (!ing2) return false;
 
-      const cantidadNeta1 = (ing.cantidad || 0) + (ing.cantidadAgregada || 0) - (ing.cantidadQuitada || 0);
-      const cantidadNeta2 = (ing2.cantidad || 0) + (ing2.cantidadAgregada || 0) - (ing2.cantidadQuitada || 0);
+      const cantidadNeta1 =
+        (ing.cantidad || 0) +
+        (ing.cantidadAgregada || 0) -
+        (ing.cantidadQuitada || 0);
+      const cantidadNeta2 =
+        (ing2.cantidad || 0) +
+        (ing2.cantidadAgregada || 0) -
+        (ing2.cantidadQuitada || 0);
 
       return (
         ing?.ingrediente?._id === ing2?.ingrediente?._id &&
@@ -438,11 +465,19 @@ export const MesasPage = () => {
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Cargando...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        Cargando...
+      </div>
+    );
   }
 
   if (!mesa) {
-    return <div className="flex items-center justify-center h-screen">Mesa no encontrada</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        Mesa no encontrada
+      </div>
+    );
   }
 
   return (
@@ -450,7 +485,7 @@ export const MesasPage = () => {
       {/* Header */}
       <div className="bg-white border-b border-[#AAB99A] p-2 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => navigate(-1)}
             className="bg-[#727D73] text-white px-2 py-1 rounded hover:bg-[#727D73]/90"
           >
@@ -458,7 +493,9 @@ export const MesasPage = () => {
           </button>
           <h1 className="text-xl text-[#727D73]">Mesa {mesa?.numero}</h1>
         </div>
-        <div className="text-[#727D73]">Mozo: {currentUser?.nombre || 'No asignado'}</div>
+        <div className="text-[#727D73]">
+          Mozo: {currentUser?.nombre || "No asignado"}
+        </div>
       </div>
 
       {/* Contenido principal */}
@@ -467,14 +504,15 @@ export const MesasPage = () => {
         <div className="w-32 bg-white border-r border-[#AAB99A] flex flex-col">
           {/* Categorías */}
           <div className="overflow-y-auto flex-1">
-            {categorias.map(cat => (
+            {categorias.map((cat) => (
               <button
                 key={cat._id}
                 onClick={() => setCategoriaActiva(cat._id)}
                 className={`w-full text-left px-2 py-1.5 text-sm transition-colors
-                  ${categoriaActiva === cat._id
-                    ? 'bg-[#727D73] text-white'
-                    : 'text-[#727D73] hover:bg-[#D0DDD0]'
+                  ${
+                    categoriaActiva === cat._id
+                      ? "bg-[#727D73] text-white"
+                      : "text-[#727D73] hover:bg-[#D0DDD0]"
                   }`}
               >
                 {cat.nombre}
@@ -484,15 +522,16 @@ export const MesasPage = () => {
           {/* Subcategorías */}
           <div className="border-t border-[#AAB99A] overflow-y-auto flex-1">
             {subCategorias
-              .filter(subcat => subcat.categoria._id === categoriaActiva)
-              .map(subcat => (
+              .filter((subcat) => subcat.categoria._id === categoriaActiva)
+              .map((subcat) => (
                 <button
                   key={subcat._id}
                   onClick={() => setSubCategoriaActiva(subcat._id)}
                   className={`w-full text-left px-2 py-1.5 text-sm transition-colors
-                    ${subCategoriaActiva === subcat._id
-                      ? 'bg-[#727D73] text-white'
-                      : 'text-[#727D73] hover:bg-[#D0DDD0]'
+                    ${
+                      subCategoriaActiva === subcat._id
+                        ? "bg-[#727D73] text-white"
+                        : "text-[#727D73] hover:bg-[#D0DDD0]"
                     }`}
                 >
                   {subcat.nombre}
@@ -505,16 +544,16 @@ export const MesasPage = () => {
         <div className="flex-1 p-4">
           <div className="grid grid-cols-8 gap-2">
             {productos
-              .filter(prod => prod.subCategoria._id === subCategoriaActiva)
-              .map(prod => (
+              .filter((prod) => prod.subCategoria._id === subCategoriaActiva)
+              .map((prod) => (
                 <button
                   key={prod._id}
                   onClick={() => handleAddProducto(prod)}
                   className="p-2 bg-white rounded border border-[#AAB99A] text-[#727D73] 
-                           hover:bg-[#D0DDD0] transition-colors text-sm text-center whitespace-nowrap 
-                           overflow-hidden text-ellipsis w-full"
+                 hover:bg-[#D0DDD0] transition-colors text-sm text-center 
+                 min-h-[60px] flex flex-col items-center justify-center" /* Cambiados los estilos aquí */
                 >
-                  {prod.nombre}
+                  <span className="break-words w-full">{prod.nombre}</span>
                 </button>
               ))}
           </div>
@@ -527,7 +566,7 @@ export const MesasPage = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto p-2">
-            {pedidoActual.productos.map(producto => (
+            {pedidoActual.productos.map((producto) => (
               <ContextMenu key={producto.uid}>
                 <ContextMenuTrigger>
                   <div className="mb-2 bg-[#F0F0D7] p-2 rounded">
@@ -537,51 +576,81 @@ export const MesasPage = () => {
                           {producto.nombre}
                         </div>
                         <div className="text-sm text-gray-600">
-                          {((producto.precio || 0) * producto.cantidad).toLocaleString('es-ES', {
-                            style: 'currency',
-                            currency: 'EUR'
+                          {(
+                            (producto.precio || 0) * producto.cantidad
+                          ).toLocaleString("es-ES", {
+                            style: "currency",
+                            currency: "EUR",
                           })}
                         </div>
-                        {(producto.ingredientes?.length > 0) && (
+                        {producto.ingredientes?.length > 0 && (
                           <div className="text-xs space-y-0.5 mt-1">
                             {/* Ingredientes agregados posteriormente */}
                             {producto.ingredientes
-                              .filter(ing => (ing.cantidadAgregada || 0) > 0)
+                              .filter((ing) => (ing.cantidadAgregada || 0) > 0)
                               .map((ing, idx) => (
-                                <div key={`${ing.ingrediente._id}-agregado-${idx}`} className="text-green-600">
-                                  + {ing.ingrediente.nombre} x{ing.cantidadAgregada} (
-                                  {(ing.ingrediente.precio || 0).toLocaleString('es-ES', {
-                                    style: 'currency',
-                                    currency: 'EUR'
-                                  })}
-                                  {ing.cantidadAgregada > 1 ? ` x ${ing.cantidadAgregada} = ${((ing.ingrediente.precio || 0) * ing.cantidadAgregada).toLocaleString('es-ES', {
-                                    style: 'currency',
-                                    currency: 'EUR'
-                                  })}` : ''}
+                                <div
+                                  key={`${ing.ingrediente._id}-agregado-${idx}`}
+                                  className="text-green-600"
+                                >
+                                  + {ing.ingrediente.nombre} x
+                                  {ing.cantidadAgregada} (
+                                  {(ing.ingrediente.precio || 0).toLocaleString(
+                                    "es-ES",
+                                    {
+                                      style: "currency",
+                                      currency: "EUR",
+                                    }
+                                  )}
+                                  {ing.cantidadAgregada > 1
+                                    ? ` x ${ing.cantidadAgregada} = ${(
+                                        (ing.ingrediente.precio || 0) *
+                                        ing.cantidadAgregada
+                                      ).toLocaleString("es-ES", {
+                                        style: "currency",
+                                        currency: "EUR",
+                                      })}`
+                                    : ""}
                                   )
                                 </div>
                               ))}
                             {/* Ingredientes quitados */}
                             {producto.ingredientes
-                              .filter(ing => (ing.cantidadQuitada || 0) > 0)
+                              .filter((ing) => (ing.cantidadQuitada || 0) > 0)
                               .map((ing, idx) => (
-                                <div key={`${ing.ingrediente._id}-quitado-${idx}`} className="text-red-600">
-                                  - {ing.ingrediente.nombre} x{ing.cantidadQuitada} {ing.unidad}
+                                <div
+                                  key={`${ing.ingrediente._id}-quitado-${idx}`}
+                                  className="text-red-600"
+                                >
+                                  - {ing.ingrediente.nombre} x
+                                  {ing.cantidadQuitada} {ing.unidad}
                                 </div>
                               ))}
                           </div>
                         )}
                       </div>
                       <div className="flex items-center gap-1 ml-2">
-                        <button 
-                          onClick={() => handleUpdateCantidad(producto.uid, producto.cantidad - 1)}
+                        <button
+                          onClick={() =>
+                            handleUpdateCantidad(
+                              producto.uid,
+                              producto.cantidad - 1
+                            )
+                          }
                           className="bg-[#727D73] text-white w-6 h-6 rounded flex items-center justify-center"
                         >
                           -
                         </button>
-                        <span className="w-6 text-center">{producto.cantidad}</span>
-                        <button 
-                          onClick={() => handleUpdateCantidad(producto.uid, producto.cantidad + 1)}
+                        <span className="w-6 text-center">
+                          {producto.cantidad}
+                        </span>
+                        <button
+                          onClick={() =>
+                            handleUpdateCantidad(
+                              producto.uid,
+                              producto.cantidad + 1
+                            )
+                          }
                           className="bg-[#727D73] text-white w-6 h-6 rounded flex items-center justify-center"
                         >
                           +
@@ -591,22 +660,27 @@ export const MesasPage = () => {
                   </div>
                 </ContextMenuTrigger>
 
-                <ContextMenuContent>
-                  <ContextMenuItem onClick={() => handleAgregarIngrediente(producto)}>
+                <ContextMenuContent className="bg-white border border-[#AAB99A] shadow-lg">
+                  <ContextMenuItem
+                    className="hover:bg-[#D0DDD0] cursor-pointer"
+                    onClick={() => handleAgregarIngrediente(producto)}
+                  >
                     Agregar Ingrediente
                   </ContextMenuItem>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem 
+                  <ContextMenuSeparator className="bg-[#AAB99A]" />
+                  <ContextMenuItem
+                    className="hover:bg-[#D0DDD0] cursor-pointer"
                     onClick={() => {
                       setSelectedProduct(producto);
+                      setSelectedIngredientToAdd(null);
                       setIsRemoveIngredientModalOpen(true);
                     }}
                   >
                     Quitar Ingrediente
                   </ContextMenuItem>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem 
-                    className="text-red-600"
+                  <ContextMenuSeparator className="bg-[#AAB99A]" />
+                  <ContextMenuItem
+                    className="text-red-600 hover:bg-[#D0DDD0] cursor-pointer"
                     onClick={() => handleEliminarProducto(producto.uid)}
                   >
                     Eliminar
@@ -621,9 +695,9 @@ export const MesasPage = () => {
               <div className="flex justify-between items-center text-sm text-[#727D73]">
                 <span>Subtotal:</span>
                 <span>
-                  {(pedidoActual.subtotal || 0).toLocaleString('es-ES', {
-                    style: 'currency',
-                    currency: 'EUR'
+                  {(pedidoActual.subtotal || 0).toLocaleString("es-ES", {
+                    style: "currency",
+                    currency: "EUR",
                   })}
                 </span>
               </div>
@@ -631,9 +705,13 @@ export const MesasPage = () => {
                 <div className="flex justify-between items-center text-sm text-red-600">
                   <span>Descuento ({pedidoActual.descuento}%):</span>
                   <span>
-                    -{((pedidoActual.subtotal * (pedidoActual.descuento / 100)) || 0).toLocaleString('es-ES', {
-                      style: 'currency',
-                      currency: 'EUR'
+                    -
+                    {(
+                      pedidoActual.subtotal * (pedidoActual.descuento / 100) ||
+                      0
+                    ).toLocaleString("es-ES", {
+                      style: "currency",
+                      currency: "EUR",
                     })}
                   </span>
                 </div>
@@ -641,9 +719,9 @@ export const MesasPage = () => {
               <div className="flex justify-between items-center font-medium text-[#727D73] pt-1 border-t border-[#AAB99A]">
                 <span>Total:</span>
                 <span>
-                  {(pedidoActual.total || 0).toLocaleString('es-ES', {
-                    style: 'currency',
-                    currency: 'EUR'
+                  {(pedidoActual.total || 0).toLocaleString("es-ES", {
+                    style: "currency",
+                    currency: "EUR",
                   })}
                 </span>
               </div>
@@ -677,7 +755,7 @@ export const MesasPage = () => {
             <button className="px-3 py-1.5 bg-[#727D73] text-white text-sm rounded hover:bg-[#727D73]/90">
               Dividir Mesa
             </button>
-            <button 
+            <button
               onClick={() => {
                 setDescuentoTemp(pedidoActual.descuento);
                 setIsDescuentoModalOpen(true);
@@ -697,8 +775,8 @@ export const MesasPage = () => {
       </div>
 
       {/* Modal de selección de cantidad */}
-      <Dialog 
-        open={isSelectCantidadModalOpen} 
+      <Dialog
+        open={isSelectCantidadModalOpen}
         onOpenChange={(open) => {
           setIsSelectCantidadModalOpen(open);
           if (!open) setSelectedIngredientToAdd(null);
@@ -707,20 +785,28 @@ export const MesasPage = () => {
         <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A]">
           <DialogHeader>
             <DialogTitle className="text-[#727D73]">
-              ¿Cuántas unidades de {selectedIngredientToAdd?.nombre || 'ingrediente'} desea agregar?
+              ¿Cuántas unidades de{" "}
+              {selectedIngredientToAdd?.nombre || "ingrediente"} desea agregar?
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="p-4">
             <div className="text-center mb-4">
               <div>Producto: {selectedProduct?.nombre}</div>
-              <div className="text-sm text-gray-600">Cantidad del producto: {selectedProduct?.cantidad || 0}</div>
+              <div className="text-sm text-gray-600">
+                Cantidad del producto: {selectedProduct?.cantidad || 0}
+              </div>
             </div>
             <div className="grid grid-cols-4 gap-4">
               {Array.from({ length: 10 }, (_, i) => (
                 <button
                   key={i + 1}
-                  onClick={() => handleConfirmAgregarIngrediente(i + 1, selectedIngredientToAdd)}
+                  onClick={() =>
+                    handleConfirmAgregarIngrediente(
+                      i + 1,
+                      selectedIngredientToAdd
+                    )
+                  }
                   className="p-4 bg-[#727D73] text-white rounded hover:bg-[#727D73]/90 text-lg font-medium"
                 >
                   {i + 1}
@@ -732,37 +818,42 @@ export const MesasPage = () => {
       </Dialog>
 
       {/* Modal de ingredientes para agregar */}
-      <Dialog 
-        open={isIngredientModalOpen} 
+      <Dialog
+        open={isIngredientModalOpen}
         onOpenChange={setIsIngredientModalOpen}
       >
         <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A]">
           <DialogHeader>
-            <DialogTitle className="text-[#727D73]">
+            <DialogTitle className="text-lg font-semibold leading-none tracking-tight text-[#727D73]">
               Agregar ingredientes a {selectedProduct?.nombre}
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="grid grid-cols-4 gap-2 p-4">
-            {(selectedProduct ? obtenerIngredientesProducto(selectedProduct) : [])
-              .filter(ingrediente => ingrediente.active)
-              .map(ingrediente => (
+            {(selectedProduct
+              ? obtenerIngredientesProducto(selectedProduct)
+              : []
+            )
+              .filter((ingrediente) => ingrediente.active)
+              .map((ingrediente) => (
                 <button
                   key={ingrediente._id}
                   className="p-2 bg-white rounded border border-[#AAB99A] text-[#727D73] 
-                           hover:bg-[#D0DDD0] transition-colors text-sm flex flex-col items-center"
+                     hover:bg-[#D0DDD0] transition-colors text-sm flex flex-col items-center"
                   onClick={() => {
                     setSelectedIngredientToAdd(ingrediente);
-                    setIsSelectCantidadModalOpen(true);
                     setIsIngredientModalOpen(false);
+                    setIsSelectCantidadModalOpen(true);
                   }}
                 >
                   <span>{ingrediente.nombre}</span>
                   <span className="text-xs text-gray-500">
-                    ({(ingrediente.precio || 0).toLocaleString('es-ES', {
-                      style: 'currency',
-                      currency: 'EUR'
-                    })} / {ingrediente.unidad})
+                    (
+                    {(ingrediente.precio || 0).toLocaleString("es-ES", {
+                      style: "currency",
+                      currency: "EUR",
+                    })}{" "}
+                    / {ingrediente.unidad})
                   </span>
                 </button>
               ))}
@@ -770,39 +861,109 @@ export const MesasPage = () => {
         </DialogContent>
       </Dialog>
 
-     {/* Modal para quitar ingredientes */}
-<Dialog 
-  open={isRemoveIngredientModalOpen} 
-  onOpenChange={setIsRemoveIngredientModalOpen}
->
-  <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A]">
-    <DialogHeader>
-      <DialogTitle className="text-[#727D73]">
-        Quitar ingredientes de {selectedProduct?.nombre}
-      </DialogTitle>
-    </DialogHeader>
-    
-    <div className="grid grid-cols-4 gap-2 p-4">
-      {selectedProduct?.ingredientes?.map(ing => (
-        <button
-          key={ing.ingrediente._id}
-          className="p-2 bg-white rounded border border-[#AAB99A] text-[#727D73] 
-                   hover:bg-[#D0DDD0] transition-colors text-sm flex flex-col items-center gap-1"
-          onClick={() => handleQuitarIngrediente(selectedProduct, ing.ingrediente._id)}
-        >
-          <span>{ing.ingrediente.nombre}</span>
-          <span className="text-xs text-gray-500">
-            ({ing.unidad})
-          </span>
-        </button>
-      ))}
-    </div>
-  </DialogContent>
-</Dialog>
+      {/* Modal para quitar ingredientes */}
+      <Dialog
+        open={isRemoveIngredientModalOpen}
+        onOpenChange={setIsRemoveIngredientModalOpen}
+      >
+        <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A]">
+          <DialogHeader>
+            <DialogTitle className="text-[#727D73]">
+              Quitar ingredientes de {selectedProduct?.nombre}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="grid grid-cols-4 gap-2 p-4">
+            {selectedProduct?.ingredientes?.map((ing) => (
+              <button
+                key={ing.ingrediente._id}
+                className="p-2 bg-white rounded border border-[#AAB99A] text-[#727D73] 
+           hover:bg-[#D0DDD0] transition-colors text-sm flex flex-col items-center gap-1"
+                onClick={() => {
+                  setSelectedIngredientToAdd(ing.ingrediente);
+                  setCurrentAction("remove");
+                  setIsSelectCantidadModalOpen(true);
+                  setIsRemoveIngredientModalOpen(false);
+                }}
+              >
+                <span>{ing.ingrediente.nombre}</span>
+                <span className="text-xs text-gray-500">({ing.unidad})</span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de selección de cantidad (usado tanto para agregar como quitar) */}
+      <Dialog
+        open={isSelectCantidadModalOpen}
+        onOpenChange={(open) => {
+          setIsSelectCantidadModalOpen(open);
+          if (!open) {
+            setSelectedIngredientToAdd(null);
+            setCurrentAction(null);
+          }
+        }}
+      >
+        <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A]">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold leading-none tracking-tight text-[#727D73]">
+              {currentAction === "add" ? "Agregar" : "Quitar"}: ¿Cuántos{" "}
+              {selectedIngredientToAdd?.nombre || "ingredientes"}?
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="p-4 relative z-50">
+            {" "}
+            {/* Añadido z-50 aquí */}
+            <div className="text-center mb-4">
+              <div>Producto: {selectedProduct?.nombre}</div>
+              <div className="text-sm text-gray-600">
+                {selectedIngredientToAdd?.nombre}:{" "}
+                {currentAction === "add"
+                  ? "Agregar cantidad"
+                  : "Quitar cantidad"}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              {Array.from({ length: 10 }, (_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => {
+                    if (currentAction === "add") {
+                      handleConfirmAgregarIngrediente(
+                        i + 1,
+                        selectedIngredientToAdd
+                      );
+                    } else {
+                      handleQuitarIngrediente(
+                        selectedProduct,
+                        selectedIngredientToAdd._id,
+                        i + 1
+                      );
+                    }
+                  }}
+                  className="p-4 bg-[#727D73] text-white rounded hover:bg-[#727D73]/90 text-lg font-medium relative z-50" /* Añadido z-50 y relative */
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-[#AAB99A] focus:ring-offset-2 z-40" /* Reducido z-index a 40 */
+            onClick={() => setIsSelectCantidadModalOpen(false)}
+          >
+            <span className="text-[#727D73] text-lg">×</span>
+            <span className="sr-only">Cerrar</span>
+          </button>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de descuento */}
-      <Dialog 
-        open={isDescuentoModalOpen} 
+      <Dialog
+        open={isDescuentoModalOpen}
         onOpenChange={(open) => {
           setIsDescuentoModalOpen(open);
           if (!open) setDescuentoTemp(pedidoActual.descuento);
@@ -814,11 +975,13 @@ export const MesasPage = () => {
               Aplicar Descuento
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="p-4">
             <div className="space-y-4">
               <div className="flex flex-col space-y-2">
-                <label className="text-sm text-[#727D73]">Porcentaje de descuento:</label>
+                <label className="text-sm text-[#727D73]">
+                  Porcentaje de descuento:
+                </label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -826,7 +989,10 @@ export const MesasPage = () => {
                     max="100"
                     value={descuentoTemp}
                     onChange={(e) => {
-                      const value = Math.min(100, Math.max(0, Number(e.target.value)));
+                      const value = Math.min(
+                        100,
+                        Math.max(0, Number(e.target.value))
+                      );
                       setDescuentoTemp(value);
                     }}
                     className="w-full px-3 py-2 border border-[#AAB99A] rounded text-[#727D73]"
@@ -840,27 +1006,33 @@ export const MesasPage = () => {
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
                     <span>
-                      {pedidoActual.subtotal.toLocaleString('es-ES', {
-                        style: 'currency',
-                        currency: 'EUR'
+                      {pedidoActual.subtotal.toLocaleString("es-ES", {
+                        style: "currency",
+                        currency: "EUR",
                       })}
                     </span>
                   </div>
                   <div className="flex justify-between text-red-600">
                     <span>Descuento ({descuentoTemp}%):</span>
                     <span>
-                      -{((pedidoActual.subtotal * (descuentoTemp / 100)) || 0).toLocaleString('es-ES', {
-                        style: 'currency',
-                        currency: 'EUR'
+                      -
+                      {(
+                        pedidoActual.subtotal * (descuentoTemp / 100) || 0
+                      ).toLocaleString("es-ES", {
+                        style: "currency",
+                        currency: "EUR",
                       })}
                     </span>
                   </div>
                   <div className="flex justify-between font-medium pt-1 border-t border-[#AAB99A]">
                     <span>Total con descuento:</span>
                     <span>
-                      {(pedidoActual.subtotal * (1 - descuentoTemp / 100)).toLocaleString('es-ES', {
-                        style: 'currency',
-                        currency: 'EUR'
+                      {(
+                        pedidoActual.subtotal *
+                        (1 - descuentoTemp / 100)
+                      ).toLocaleString("es-ES", {
+                        style: "currency",
+                        currency: "EUR",
                       })}
                     </span>
                   </div>
