@@ -1,26 +1,16 @@
-// TabButton.jsx
-const TabButton = ({ isActive, onClick, children }) => (
-  <button
-    onClick={onClick}
-    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors 
-      ${isActive 
-        ? 'bg-[#727D73] text-[#F0F0D7]' 
-        : 'text-[#727D73] hover:bg-[#D0DDD0]'}`}
-  >
-    {children}
-  </button>
-);
-
-// Salones.jsx
 import React, { useState, useEffect } from 'react';
 import { getSalones } from '../services/salonesService';
 import { toast } from 'react-toastify';
 import { Mesas } from '../components/SalonesTab/Mesas';
+import TabButton from '../components/TabButton';
+import { DetallePedido } from '../components/SalonesTab/DetallePedidos';
 
 export function Salones() {
   const [salones, setSalones] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pedidoActual, setPedidoActual] = useState(null);
+  const [selectedMesa, setSelectedMesa] = useState(null);
 
   useEffect(() => {
     cargarDatos();
@@ -39,6 +29,11 @@ export function Salones() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleMesaSeleccionada = (mesa, pedido) => {
+    setSelectedMesa(mesa);
+    setPedidoActual(pedido);
   };
 
   return (
@@ -61,14 +56,17 @@ export function Salones() {
         </div>
       </div>
 
-      <div className=" flex-1 grid grid-cols-12 gap-4">
-      <div className="col-span-9 bg-[rgb(240,240,215)] rounded-lg border border-[#AAB99A] p-4">
+      <div className="flex-1 grid grid-cols-12 gap-4">
+        <div className="col-span-9 bg-[rgb(240,240,215)] rounded-lg border border-[#AAB99A] p-4">
           {isLoading ? (
             <div className="h-full flex items-center justify-center">
               Cargando salones...
             </div>
           ) : activeTab ? (
-            <Mesas salonId={activeTab} />
+            <Mesas 
+              salonId={activeTab} 
+              onMesaSelect={handleMesaSeleccionada}
+            />
           ) : (
             <div className="h-full flex items-center justify-center text-gray-500">
               Seleccione un salón para ver sus mesas
@@ -77,7 +75,15 @@ export function Salones() {
         </div>
 
         <div className="col-span-3 bg-[rgb(240,240,215)] rounded-lg border border-[#AAB99A] p-4">
-          <div className="text-lg font-medium text-[#727D73] mb-4">Detalle</div>
+          <div className="text-lg font-medium text-[#727D73] mb-4">
+            {selectedMesa ? `Mesa ${selectedMesa.numero}` : 'Detalle'}
+          </div>
+          <DetallePedido pedido={pedidoActual} />
+          {!pedidoActual && selectedMesa && (
+            <div className="h-full flex items-center justify-center text-gray-500">
+              No hay pedido activo en esta mesa
+            </div>
+          )}
         </div>
       </div>
     </div>

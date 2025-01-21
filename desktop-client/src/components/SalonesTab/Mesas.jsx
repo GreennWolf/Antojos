@@ -4,11 +4,12 @@ import { getMesasBySalon } from '../../services/mesasService';
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 
-export const Mesas = ({ salonId }) => {
+export const Mesas = ({ salonId, onMesaSelect }) => {
   const navigate = useNavigate();
   const [mesas, setMesas] = useState([]);
   const [isLoadingMesas, setIsLoadingMesas] = useState(true);
   const [mesasConPedido, setMesasConPedido] = useState(new Set());
+  const [selectedMesa, setSelectedMesa] = useState(null);
 
   useEffect(() => {
     if (salonId) {
@@ -49,6 +50,23 @@ export const Mesas = ({ salonId }) => {
     }
   };
 
+  const handleMesaClick = (mesa) => {
+    setSelectedMesa(mesa);
+    const pedidoKey = `mesa_pedido_${mesa._id}`;
+    const pedidoGuardado = localStorage.getItem(pedidoKey);
+    
+    let pedido = null;
+    if (pedidoGuardado) {
+      try {
+        pedido = JSON.parse(pedidoGuardado);
+      } catch (error) {
+        console.error('Error al parsear pedido:', error);
+      }
+    }
+    
+    onMesaSelect(mesa, pedido);
+  };
+
   const handleMesaDoubleClick = (mesaId) => {
     navigate(`/mesas/${mesaId}`);
   };
@@ -66,13 +84,16 @@ export const Mesas = ({ salonId }) => {
       {mesas.map((mesa) => (
         <div
           key={mesa._id}
+          onClick={() => handleMesaClick(mesa)}
           onDoubleClick={() => handleMesaDoubleClick(mesa._id)}
-          className={`aspect-square rounded-lg border-2 border-[#727D73] 
-                   flex items-center justify-center cursor-pointer transition-colors
-                   ${mesasConPedido.has(mesa._id)
-                     ? 'bg-[#9cc273] hover:bg-[#AAB99A]/80'  // Color más oscuro para mesas con pedido
-                     : 'bg-[#D0DDD0] hover:bg-[#D0DDD0]/80'  // Color original para mesas sin pedido
-                   }`}
+          className={`aspect-square rounded-lg border-2 
+            flex items-center justify-center cursor-pointer transition-colors
+            ${selectedMesa?._id === mesa._id ? 'border-4' : 'border-2'}
+            ${selectedMesa?._id === mesa._id ? 'border-[#727D73]' : 'border-[#727D73]'}
+            ${mesasConPedido.has(mesa._id)
+              ? 'bg-[#9cc273] hover:bg-[#AAB99A]/80'
+              : 'bg-[#D0DDD0] hover:bg-[#D0DDD0]/80'
+            }`}
         >
           <span className="text-md font-medium text-[#727D73] text-center">
             {mesa.numero}

@@ -13,6 +13,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogPortal,
+  DialogOverlay,
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { getMesaById, updateMesa } from "../../services/mesasService";
@@ -65,15 +67,26 @@ export const MesasPage = () => {
   // Estados para modales e ingredientes
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isIngredientModalOpen, setIsIngredientModalOpen] = useState(false);
-  const [isRemoveIngredientModalOpen, setIsRemoveIngredientModalOpen] =
-    useState(false);
-  const [isSelectCantidadModalOpen, setIsSelectCantidadModalOpen] =
-    useState(false);
+  const [isRemoveIngredientModalOpen, setIsRemoveIngredientModalOpen] = useState(false);
+  const [isSelectCantidadModalOpen, setIsSelectCantidadModalOpen] = useState(false);
   const [isDescuentoModalOpen, setIsDescuentoModalOpen] = useState(false);
   const [ingredientesDisponibles, setIngredientesDisponibles] = useState([]);
   const [selectedIngredientToAdd, setSelectedIngredientToAdd] = useState(null);
   const [selectedCantidadToAdd, setSelectedCantidadToAdd] = useState(1);
   const [descuentoTemp, setDescuentoTemp] = useState(0);
+  useEffect(() => {
+    const handleFocus = (e) => {
+      const dialogElement = document.querySelector('[role="dialog"][aria-hidden="true"]');
+      if (dialogElement?.contains(e.target)) {
+        e.target.setAttribute('tabindex', '-1');
+        e.target.blur();
+        dialogElement.focus();
+      }
+    };
+
+    document.addEventListener('focus', handleFocus, true);
+    return () => document.removeEventListener('focus', handleFocus, true);
+  }, []);
 
   useEffect(() => {
     try {
@@ -132,15 +145,11 @@ export const MesasPage = () => {
 
   const calcularTotal = (productos, descuentoActual = 0) => {
     const subtotalConIngredientes = productos.reduce((total, p) => {
-      // Precio base del producto
       const precioBase = (p.precio || 0) * p.cantidad;
       
-      // Precio de ingredientes
       const precioIngredientes = p.ingredientes?.reduce((sum, ing) => {
-        // Si el ingrediente está quitado, no sumamos su precio
         if (ing.cantidadQuitada) return sum;
         
-        // Si es ingrediente agregado posteriormente
         if (ing.cantidadAgregada) {
           return sum + ((ing.ingrediente.precio || 0) * ing.cantidadAgregada);
         }
@@ -212,12 +221,10 @@ export const MesasPage = () => {
       setIsLoading(false);
     }
   };
-
   const handleAddProducto = (producto) => {
     if (!producto) return;
 
     setPedidoActual((prev) => {
-      // Inicializamos los ingredientes base del producto
       const ingredientesIniciales =
         producto.ingredientes?.map((ing) => ({
           ingrediente: ing.ingrediente,
@@ -263,10 +270,7 @@ export const MesasPage = () => {
 
   const handleAgregarIngrediente = (producto) => {
     if (!producto) return;
-
     setSelectedProduct(producto);
-
-    // Primero mostramos el modal de selección de ingredientes
     setIsIngredientModalOpen(true);
     setCurrentAction("add");
   };
@@ -284,9 +288,7 @@ export const MesasPage = () => {
         );
 
         if (ingredienteExistente) {
-          // Si el ingrediente existe y tiene cantidad quitada
           if (ingredienteExistente.cantidadQuitada > 0) {
-            // Reducimos la cantidad quitada
             nuevosIngredientes = nuevosIngredientes
               .map((ing) => {
                 if (ing.ingrediente._id !== ingrediente._id) return ing;
@@ -302,7 +304,6 @@ export const MesasPage = () => {
                   ing.porDefecto
               );
           } else {
-            // Si no tiene cantidad quitada, agregamos cantidad
             nuevosIngredientes = nuevosIngredientes.map((ing) => {
               if (ing.ingrediente._id !== ingrediente._id) return ing;
               return {
@@ -312,7 +313,6 @@ export const MesasPage = () => {
             });
           }
         } else {
-          // Si el ingrediente no existe, lo añadimos como nuevo
           nuevosIngredientes.push({
             ingrediente: ingrediente,
             cantidad: 0,
@@ -355,7 +355,6 @@ export const MesasPage = () => {
         );
 
         if (ingredienteExistente) {
-          // Si hay cantidad agregada, la reducimos
           nuevosIngredientes = nuevosIngredientes
             .map((ing) => {
               if (ing.ingrediente._id !== ingredienteId) return ing;
@@ -366,7 +365,6 @@ export const MesasPage = () => {
             })
             .filter((ing) => ing.cantidadAgregada > 0 || ing.porDefecto);
         } else {
-          // Si no hay cantidad agregada, marcamos como quitado
           nuevosIngredientes = nuevosIngredientes.map((ing) => {
             if (ing.ingrediente._id !== ingredienteId) return ing;
             return {
@@ -391,7 +389,6 @@ export const MesasPage = () => {
 
     setIsSelectCantidadModalOpen(false);
   };
-
   const handleUpdateCantidad = (uid, nuevaCantidad) => {
     if (nuevaCantidad < 1) return;
 
@@ -551,7 +548,7 @@ export const MesasPage = () => {
                   onClick={() => handleAddProducto(prod)}
                   className="p-2 bg-white rounded border border-[#AAB99A] text-[#727D73] 
                  hover:bg-[#D0DDD0] transition-colors text-sm text-center 
-                 min-h-[60px] flex flex-col items-center justify-center" /* Cambiados los estilos aquí */
+                 min-h-[60px] flex flex-col items-center justify-center"
                 >
                   <span className="break-words w-full">{prod.nombre}</span>
                 </button>
@@ -585,7 +582,6 @@ export const MesasPage = () => {
                         </div>
                         {producto.ingredientes?.length > 0 && (
                           <div className="text-xs space-y-0.5 mt-1">
-                            {/* Ingredientes agregados posteriormente */}
                             {producto.ingredientes
                               .filter((ing) => (ing.cantidadAgregada || 0) > 0)
                               .map((ing, idx) => (
@@ -614,7 +610,6 @@ export const MesasPage = () => {
                                   )
                                 </div>
                               ))}
-                            {/* Ingredientes quitados */}
                             {producto.ingredientes
                               .filter((ing) => (ing.cantidadQuitada || 0) > 0)
                               .map((ing, idx) => (
@@ -750,7 +745,6 @@ export const MesasPage = () => {
               Cambiar Mesa
             </button>
           </div>
-
           <div className="flex gap-2">
             <button className="px-3 py-1.5 bg-[#727D73] text-white text-sm rounded hover:bg-[#727D73]/90">
               Dividir Mesa
@@ -773,129 +767,99 @@ export const MesasPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Modal de selección de cantidad */}
-      <Dialog
-        open={isSelectCantidadModalOpen}
-        onOpenChange={(open) => {
-          setIsSelectCantidadModalOpen(open);
-          if (!open) setSelectedIngredientToAdd(null);
-        }}
-      >
-        <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A]">
-          <DialogHeader>
-            <DialogTitle className="text-[#727D73]">
-              ¿Cuántas unidades de{" "}
-              {selectedIngredientToAdd?.nombre || "ingrediente"} desea agregar?
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="p-4">
-            <div className="text-center mb-4">
-              <div>Producto: {selectedProduct?.nombre}</div>
-              <div className="text-sm text-gray-600">
-                Cantidad del producto: {selectedProduct?.cantidad || 0}
-              </div>
-            </div>
-            <div className="grid grid-cols-4 gap-4">
-              {Array.from({ length: 10 }, (_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() =>
-                    handleConfirmAgregarIngrediente(
-                      i + 1,
-                      selectedIngredientToAdd
-                    )
-                  }
-                  className="p-4 bg-[#727D73] text-white rounded hover:bg-[#727D73]/90 text-lg font-medium"
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Modal de ingredientes para agregar */}
-      <Dialog
+      <Dialog 
         open={isIngredientModalOpen}
         onOpenChange={setIsIngredientModalOpen}
       >
-        <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A]">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold leading-none tracking-tight text-[#727D73]">
-              Agregar ingredientes a {selectedProduct?.nombre}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogPortal>
+          <DialogOverlay className="bg-black/80" onClick={(e) => e.stopPropagation()} />
+          <DialogContent 
+            className="bg-[#F0F0D7] border border-[#AAB99A]"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onInteractOutside={(e) => e.preventDefault()}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-lg font-semibold leading-none tracking-tight text-[#727D73]">
+                Agregar ingredientes a {selectedProduct?.nombre}
+              </DialogTitle>
+            </DialogHeader>
 
-          <div className="grid grid-cols-4 gap-2 p-4">
-            {(selectedProduct
-              ? obtenerIngredientesProducto(selectedProduct)
-              : []
-            )
-              .filter((ingrediente) => ingrediente.active)
-              .map((ingrediente) => (
-                <button
-                  key={ingrediente._id}
-                  className="p-2 bg-white rounded border border-[#AAB99A] text-[#727D73] 
-                     hover:bg-[#D0DDD0] transition-colors text-sm flex flex-col items-center"
-                  onClick={() => {
-                    setSelectedIngredientToAdd(ingrediente);
-                    setIsIngredientModalOpen(false);
-                    setIsSelectCantidadModalOpen(true);
-                  }}
-                >
-                  <span>{ingrediente.nombre}</span>
-                  <span className="text-xs text-gray-500">
-                    (
-                    {(ingrediente.precio || 0).toLocaleString("es-ES", {
-                      style: "currency",
-                      currency: "EUR",
-                    })}{" "}
-                    / {ingrediente.unidad})
-                  </span>
-                </button>
-              ))}
-          </div>
-        </DialogContent>
+            <div className="grid grid-cols-4 gap-2 p-4">
+              {(selectedProduct
+                ? obtenerIngredientesProducto(selectedProduct)
+                : []
+              )
+                .filter((ingrediente) => ingrediente.active)
+                .map((ingrediente) => (
+                  <button
+                    key={ingrediente._id}
+                    className="p-2 bg-white rounded border border-[#AAB99A] text-[#727D73] 
+                       hover:bg-[#D0DDD0] transition-colors text-sm flex flex-col items-center"
+                    onClick={() => {
+                      setSelectedIngredientToAdd(ingrediente);
+                      setIsIngredientModalOpen(false);
+                      setIsSelectCantidadModalOpen(true);
+                    }}
+                  >
+                    <span>{ingrediente.nombre}</span>
+                    <span className="text-xs text-gray-500">
+                      (
+                      {(ingrediente.precio || 0).toLocaleString("es-ES", {
+                        style: "currency",
+                        currency: "EUR",
+                      })}{" "}
+                      / {ingrediente.unidad})
+                    </span>
+                  </button>
+                ))}
+            </div>
+          </DialogContent>
+        </DialogPortal>
       </Dialog>
 
       {/* Modal para quitar ingredientes */}
-      <Dialog
+      <Dialog 
         open={isRemoveIngredientModalOpen}
         onOpenChange={setIsRemoveIngredientModalOpen}
       >
-        <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A]">
-          <DialogHeader>
-            <DialogTitle className="text-[#727D73]">
-              Quitar ingredientes de {selectedProduct?.nombre}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogPortal>
+          <DialogOverlay className="bg-black/80" onClick={(e) => e.stopPropagation()} />
+          <DialogContent 
+            className="bg-[#F0F0D7] border border-[#AAB99A]"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onInteractOutside={(e) => e.preventDefault()}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-[#727D73]">
+                Quitar ingredientes de {selectedProduct?.nombre}
+              </DialogTitle>
+            </DialogHeader>
 
-          <div className="grid grid-cols-4 gap-2 p-4">
-            {selectedProduct?.ingredientes?.map((ing) => (
-              <button
-                key={ing.ingrediente._id}
-                className="p-2 bg-white rounded border border-[#AAB99A] text-[#727D73] 
-           hover:bg-[#D0DDD0] transition-colors text-sm flex flex-col items-center gap-1"
-                onClick={() => {
-                  setSelectedIngredientToAdd(ing.ingrediente);
-                  setCurrentAction("remove");
-                  setIsSelectCantidadModalOpen(true);
-                  setIsRemoveIngredientModalOpen(false);
-                }}
-              >
-                <span>{ing.ingrediente.nombre}</span>
-                <span className="text-xs text-gray-500">({ing.unidad})</span>
-              </button>
-            ))}
-          </div>
-        </DialogContent>
+            <div className="grid grid-cols-4 gap-2 p-4">
+              {selectedProduct?.ingredientes?.map((ing) => (
+                <button
+                  key={ing.ingrediente._id}
+                  className="p-2 bg-white rounded border border-[#AAB99A] text-[#727D73] 
+                    hover:bg-[#D0DDD0] transition-colors text-sm flex flex-col items-center gap-1"
+                  onClick={() => {
+                    setSelectedIngredientToAdd(ing.ingrediente);
+                    setCurrentAction("remove");
+                    setIsSelectCantidadModalOpen(true);
+                    setIsRemoveIngredientModalOpen(false);
+                  }}
+                >
+                  <span>{ing.ingrediente.nombre}</span>
+                  <span className="text-xs text-gray-500">({ing.unidad})</span>
+                </button>
+              ))}
+            </div>
+          </DialogContent>
+        </DialogPortal>
       </Dialog>
 
-      {/* Modal de selección de cantidad (usado tanto para agregar como quitar) */}
-      <Dialog
+      {/* Modal de selección de cantidad */}
+      <Dialog 
         open={isSelectCantidadModalOpen}
         onOpenChange={(open) => {
           setIsSelectCantidadModalOpen(open);
@@ -905,62 +869,61 @@ export const MesasPage = () => {
           }
         }}
       >
-        <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A]">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold leading-none tracking-tight text-[#727D73]">
-              {currentAction === "add" ? "Agregar" : "Quitar"}: ¿Cuántos{" "}
-              {selectedIngredientToAdd?.nombre || "ingredientes"}?
-            </DialogTitle>
-          </DialogHeader>
+        <DialogPortal>
+          <DialogOverlay className="bg-black/80" onClick={(e) => e.stopPropagation()} />
+          <DialogContent 
+            className="bg-[#F0F0D7] border border-[#AAB99A]"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onInteractOutside={(e) => e.preventDefault()}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-lg font-semibold leading-none tracking-tight text-[#727D73]">
+                {currentAction === "add" ? "Agregar" : "Quitar"}: ¿Cuántos{" "}
+                {selectedIngredientToAdd?.nombre || "ingredientes"}?
+              </DialogTitle>
+            </DialogHeader>
 
-          <div className="p-4 relative z-50">
-            {" "}
-            {/* Añadido z-50 aquí */}
-            <div className="text-center mb-4">
-              <div>Producto: {selectedProduct?.nombre}</div>
-              <div className="text-sm text-gray-600">
-                {selectedIngredientToAdd?.nombre}:{" "}
-                {currentAction === "add"
-                  ? "Agregar cantidad"
-                  : "Quitar cantidad"}
+            <div className="p-4 relative z-50">
+              <div className="text-center mb-4">
+                <div>Producto: {selectedProduct?.nombre}</div>
+                <div className="text-sm text-gray-600">
+                  {selectedIngredientToAdd?.nombre}:{" "}
+                  {currentAction === "add" ? "Agregar cantidad" : "Quitar cantidad"}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-4">
+                {Array.from({ length: 10 }, (_, i) => (
+                  <button
+                    key={i + 1}
+                    onClick={() => {
+                      if (currentAction === "add") {
+                        handleConfirmAgregarIngrediente(i + 1, selectedIngredientToAdd);
+                      } else {
+                        handleQuitarIngrediente(
+                          selectedProduct,
+                          selectedIngredientToAdd._id,
+                          i + 1
+                        );
+                      }
+                    }}
+                    className="p-4 bg-[#727D73] text-white rounded hover:bg-[#727D73]/90 text-lg font-medium relative z-50"
+                  >
+                    {i + 1}
+                  </button>
+                ))}
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-4">
-              {Array.from({ length: 10 }, (_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => {
-                    if (currentAction === "add") {
-                      handleConfirmAgregarIngrediente(
-                        i + 1,
-                        selectedIngredientToAdd
-                      );
-                    } else {
-                      handleQuitarIngrediente(
-                        selectedProduct,
-                        selectedIngredientToAdd._id,
-                        i + 1
-                      );
-                    }
-                  }}
-                  className="p-4 bg-[#727D73] text-white rounded hover:bg-[#727D73]/90 text-lg font-medium relative z-50" /* Añadido z-50 y relative */
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          <button
-            className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-[#AAB99A] focus:ring-offset-2 z-40" /* Reducido z-index a 40 */
-            onClick={() => setIsSelectCantidadModalOpen(false)}
-          >
-            <span className="text-[#727D73] text-lg">×</span>
-            <span className="sr-only">Cerrar</span>
-          </button>
-        </DialogContent>
+            <button
+              className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-[#AAB99A] focus:ring-offset-2 z-40"
+              onClick={() => setIsSelectCantidadModalOpen(false)}
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Cerrar</span>
+            </button>
+          </DialogContent>
+        </DialogPortal>
       </Dialog>
-
       {/* Modal de descuento */}
       <Dialog
         open={isDescuentoModalOpen}
@@ -969,93 +932,97 @@ export const MesasPage = () => {
           if (!open) setDescuentoTemp(pedidoActual.descuento);
         }}
       >
-        <DialogContent className="bg-[#F0F0D7] border border-[#AAB99A] max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-[#727D73]">
-              Aplicar Descuento
-            </DialogTitle>
-          </DialogHeader>
+        <DialogPortal>
+          <DialogOverlay className="bg-black/80" onClick={(e) => e.stopPropagation()} />
+          <DialogContent 
+            className="bg-[#F0F0D7] border border-[#AAB99A] max-w-sm"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onInteractOutside={(e) => e.preventDefault()}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-[#727D73]">
+                Aplicar Descuento
+              </DialogTitle>
+            </DialogHeader>
 
-          <div className="p-4">
-            <div className="space-y-4">
-              <div className="flex flex-col space-y-2">
-                <label className="text-sm text-[#727D73]">
-                  Porcentaje de descuento:
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={descuentoTemp}
-                    onChange={(e) => {
-                      const value = Math.min(
-                        100,
-                        Math.max(0, Number(e.target.value))
-                      );
-                      setDescuentoTemp(value);
-                    }}
-                    className="w-full px-3 py-2 border border-[#AAB99A] rounded text-[#727D73]"
-                  />
-                  <span className="text-[#727D73]">%</span>
-                </div>
-              </div>
-
-              {pedidoActual.subtotal > 0 && (
-                <div className="text-sm text-[#727D73] space-y-1">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>
-                      {pedidoActual.subtotal.toLocaleString("es-ES", {
-                        style: "currency",
-                        currency: "EUR",
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-red-600">
-                    <span>Descuento ({descuentoTemp}%):</span>
-                    <span>
-                      -
-                      {(
-                        pedidoActual.subtotal * (descuentoTemp / 100) || 0
-                      ).toLocaleString("es-ES", {
-                        style: "currency",
-                        currency: "EUR",
-                      })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between font-medium pt-1 border-t border-[#AAB99A]">
-                    <span>Total con descuento:</span>
-                    <span>
-                      {(
-                        pedidoActual.subtotal *
-                        (1 - descuentoTemp / 100)
-                      ).toLocaleString("es-ES", {
-                        style: "currency",
-                        currency: "EUR",
-                      })}
-                    </span>
+            <div className="p-4">
+              <div className="space-y-4">
+                <div className="flex flex-col space-y-2">
+                  <label className="text-sm text-[#727D73]">
+                    Porcentaje de descuento:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={descuentoTemp}
+                      onChange={(e) => {
+                        const value = Math.min(100, Math.max(0, Number(e.target.value)));
+                        setDescuentoTemp(value);
+                      }}
+                      className="w-full px-3 py-2 border border-[#AAB99A] rounded text-[#727D73]"
+                    />
+                    <span className="text-[#727D73]">%</span>
                   </div>
                 </div>
-              )}
 
-              <div className="flex justify-end gap-2 pt-4">
-                <button
-                  onClick={() => setIsDescuentoModalOpen(false)}
-                  className="px-4 py-2 border border-[#727D73] text-[#727D73] rounded hover:bg-[#D0DDD0]"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleAplicarDescuento}
-                  className="px-4 py-2 bg-[#727D73] text-white rounded hover:bg-[#727D73]/90"
-                >
-                  Aplicar Descuento
-                </button>
+                {pedidoActual.subtotal > 0 && (
+                  <div className="text-sm text-[#727D73] space-y-1">
+                    <div className="flex justify-between">
+                      <span>Subtotal:</span>
+                      <span>
+                        {pedidoActual.subtotal.toLocaleString("es-ES", {
+                          style: "currency",
+                          currency: "EUR",
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-red-600">
+                      <span>Descuento ({descuentoTemp}%):</span>
+                      <span>
+                        -
+                        {(pedidoActual.subtotal * (descuentoTemp / 100) || 0).toLocaleString(
+                          "es-ES",
+                          {
+                            style: "currency",
+                            currency: "EUR",
+                          }
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-medium pt-1 border-t border-[#AAB99A]">
+                      <span>Total con descuento:</span>
+                      <span>
+                        {(
+                          pedidoActual.subtotal * (1 - descuentoTemp / 100)
+                        ).toLocaleString("es-ES", {
+                          style: "currency",
+                          currency: "EUR",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <button
+                    onClick={() => setIsDescuentoModalOpen(false)}
+                    className="px-4 py-2 border border-[#727D73] text-[#727D73] rounded hover:bg-[#D0DDD0]"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleAplicarDescuento}
+                    className="px-4 py-2 bg-[#727D73] text-white rounded hover:bg-[#727D73]/90"
+                  >
+                    Aplicar Descuento
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </DialogContent>
+          </DialogContent>
+        </DialogPortal>
       </Dialog>
     </div>
   );
