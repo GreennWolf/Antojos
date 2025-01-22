@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
+import CambiarMesaDialog from "./BotonesMesasPage/CambiarMesasDialog";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -17,11 +18,13 @@ import {
   DialogOverlay,
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
-import { getMesaById, updateMesa } from "../../services/mesasService";
+import { getMesaById, getMesas, updateMesa } from "../../services/mesasService";
 import { getSubCategorias } from "../../services/subCategoriasService";
 import { getProductos } from "../../services/productosService";
 import { getCategorias } from "../../services/categoriasService";
 import { toast } from "react-toastify";
+import JuntarMesaDialog from "./BotonesMesasPage/JuntarMesasDialog";
+import DividirMesaDialog from "./BotonesMesasPage/DividirMesaDialog";
 
 export const MesasPage = () => {
   const { mesaId } = useParams();
@@ -32,6 +35,9 @@ export const MesasPage = () => {
   const [mesa, setMesa] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCambiarMesaModalOpen, setIsCambiarMesaModalOpen] = useState(false);
+  const [isJuntarMesaModalOpen, setIsJuntarMesaModalOpen] = useState(false);
+  const [isDividirMesaModalOpen, setIsDividirMesaModalOpen] = useState(false);
 
   // Estados para categorías y productos
   const [categorias, setCategorias] = useState([]);
@@ -67,8 +73,10 @@ export const MesasPage = () => {
   // Estados para modales e ingredientes
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isIngredientModalOpen, setIsIngredientModalOpen] = useState(false);
-  const [isRemoveIngredientModalOpen, setIsRemoveIngredientModalOpen] = useState(false);
-  const [isSelectCantidadModalOpen, setIsSelectCantidadModalOpen] = useState(false);
+  const [isRemoveIngredientModalOpen, setIsRemoveIngredientModalOpen] =
+    useState(false);
+  const [isSelectCantidadModalOpen, setIsSelectCantidadModalOpen] =
+    useState(false);
   const [isDescuentoModalOpen, setIsDescuentoModalOpen] = useState(false);
   const [ingredientesDisponibles, setIngredientesDisponibles] = useState([]);
   const [selectedIngredientToAdd, setSelectedIngredientToAdd] = useState(null);
@@ -76,16 +84,18 @@ export const MesasPage = () => {
   const [descuentoTemp, setDescuentoTemp] = useState(0);
   useEffect(() => {
     const handleFocus = (e) => {
-      const dialogElement = document.querySelector('[role="dialog"][aria-hidden="true"]');
+      const dialogElement = document.querySelector(
+        '[role="dialog"][aria-hidden="true"]'
+      );
       if (dialogElement?.contains(e.target)) {
-        e.target.setAttribute('tabindex', '-1');
+        e.target.setAttribute("tabindex", "-1");
         e.target.blur();
         dialogElement.focus();
       }
     };
 
-    document.addEventListener('focus', handleFocus, true);
-    return () => document.removeEventListener('focus', handleFocus, true);
+    document.addEventListener("focus", handleFocus, true);
+    return () => document.removeEventListener("focus", handleFocus, true);
   }, []);
 
   useEffect(() => {
@@ -146,26 +156,28 @@ export const MesasPage = () => {
   const calcularTotal = (productos, descuentoActual = 0) => {
     const subtotalConIngredientes = productos.reduce((total, p) => {
       const precioBase = (p.precio || 0) * p.cantidad;
-      
-      const precioIngredientes = p.ingredientes?.reduce((sum, ing) => {
-        if (ing.cantidadQuitada) return sum;
-        
-        if (ing.cantidadAgregada) {
-          return sum + ((ing.ingrediente.precio || 0) * ing.cantidadAgregada);
-        }
-        
-        return sum;
-      }, 0) || 0;
-  
+
+      const precioIngredientes =
+        p.ingredientes?.reduce((sum, ing) => {
+          if (ing.cantidadQuitada) return sum;
+
+          if (ing.cantidadAgregada) {
+            return sum + (ing.ingrediente.precio || 0) * ing.cantidadAgregada;
+          }
+
+          return sum;
+        }, 0) || 0;
+
       return total + precioBase + precioIngredientes;
     }, 0);
-  
-    const descuentoCalculado = (subtotalConIngredientes * (descuentoActual / 100)) || 0;
-  
+
+    const descuentoCalculado =
+      subtotalConIngredientes * (descuentoActual / 100) || 0;
+
     return {
       subtotal: subtotalConIngredientes,
       descuento: descuentoActual,
-      total: subtotalConIngredientes - descuentoCalculado
+      total: subtotalConIngredientes - descuentoCalculado,
     };
   };
 
@@ -266,6 +278,167 @@ export const MesasPage = () => {
         ...totales,
       };
     });
+  };
+
+  const handleCobrarPedidoDividido = async (pedidoDividido) => {
+    try {
+      // Actualizamos el estado local
+      setPedidoActual(prev => {
+        // Filtramos los productos que NO están en el pedido dividido
+        const productosRestantes = prev.productos.filter(producto => 
+          !pedidoDividido.productos.some(p => p.uid === producto.uid)
+        );
+  
+        return {
+          productos: productosRestantes,
+          ...calcularTotal(productosRestantes, prev.descuento)
+        };
+      });
+  
+      // Actualizamos el localStorage con el nuevo estado
+      const nuevoPedido = {
+        productos: pedidoActual.productos.filter(producto => 
+          !pedidoDividido.productos.some(p => p.uid === producto.uid)
+        ),
+        ...calcularTotal(
+          pedidoActual.productos.filter(producto => 
+            !pedidoDividido.productos.some(p => p.uid === producto.uid)
+          ),
+          pedidoActual.descuento
+        )
+      };
+  
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nuevoPedido));
+  
+      // Actualizamos la mesa en la base de datos
+      await updateMesa(mesaId, {
+        ...mesa,
+        pedidoActual: nuevoPedido
+      });
+  
+      toast.success('Cuenta separada cobrada exitosamente');
+      setIsDividirMesaModalOpen(false);
+  
+      // Si no quedan productos, cerramos la mesa
+      if (nuevoPedido.productos.length === 0) {
+        await updateMesa(mesaId, {
+          ...mesa,
+          estado: 'cerrada',
+          camarero: null,
+          nombreCamarero: null,
+          pedidoActual: null
+        });
+        
+        localStorage.removeItem(STORAGE_KEY);
+        navigate('/');
+      }
+  
+    } catch (error) {
+      console.error('Error al cobrar pedido dividido:', error);
+      toast.error('Error al cobrar la cuenta separada');
+    }
+  };
+
+  const handleJuntarMesa = async (mesaOrigenId, pedidoOrigen) => {
+    try {
+      const productosOrigen = pedidoOrigen.productos || [];
+
+      setPedidoActual((prev) => {
+        let nuevosProductos = [...prev.productos];
+
+        // Procesamos cada producto de la mesa origen
+        productosOrigen.forEach((productoOrigen) => {
+          // Buscamos si ya existe un producto igual (mismo nombre e ingredientes)
+          const productoExistenteIndex = nuevosProductos.findIndex(
+            (p) =>
+              p.nombre === productoOrigen.nombre &&
+              sonIngredientesIguales(
+                p.ingredientes,
+                productoOrigen.ingredientes
+              )
+          );
+
+          if (productoExistenteIndex !== -1) {
+            // Si existe, sumamos la cantidad
+            nuevosProductos[productoExistenteIndex] = {
+              ...nuevosProductos[productoExistenteIndex],
+              cantidad:
+                nuevosProductos[productoExistenteIndex].cantidad +
+                productoOrigen.cantidad,
+            };
+          } else {
+            // Si no existe, lo agregamos como nuevo
+            nuevosProductos.push({
+              ...productoOrigen,
+              uid: Date.now() + Math.random(), // Aseguramos un uid único
+            });
+          }
+        });
+
+        const totales = calcularTotal(nuevosProductos, prev.descuento);
+
+        return {
+          productos: nuevosProductos,
+          ...totales,
+        };
+      });
+
+      // Limpiar el localStorage de la mesa origen
+      localStorage.removeItem(`mesa_pedido_${mesaOrigenId}`);
+
+      // Actualizar el estado de la mesa origen en la base de datos
+      await updateMesa(mesaOrigenId, {
+        estado: "cerrada",
+        camarero: null,
+        nombreCamarero: null,
+        pedidoActual: null,
+      });
+
+      toast.success("Mesas juntadas exitosamente");
+    } catch (error) {
+      console.error("Error al juntar mesas:", error);
+      toast.error("Error al juntar las mesas");
+    }
+  };
+
+  const handleCambiarMesa = async (nuevaMesaId) => {
+    try {
+      // Obtener el estado actual de las mesas
+      const [mesaActualData, nuevaMesaData] = await Promise.all([
+        getMesaById(mesaId),
+        getMesaById(nuevaMesaId),
+      ]);
+
+      // Actualizar la mesa actual (marcarla como cerrada)
+      await updateMesa(mesaId, {
+        ...mesaActualData,
+        estado: "cerrada",
+        camarero: null,
+        nombreCamarero: null,
+      });
+
+      // Actualizar la nueva mesa con el pedido actual
+      await updateMesa(nuevaMesaId, {
+        ...nuevaMesaData,
+        estado: "abierta",
+        camarero: currentUser?.id,
+        nombreCamarero: currentUser?.nombre,
+      });
+
+      // Transferir el pedido en localStorage
+      const pedidoActualString = localStorage.getItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(`mesa_pedido_${nuevaMesaId}`, pedidoActualString);
+
+      // Mostrar mensaje de éxito
+      toast.success("Mesa cambiada exitosamente");
+
+      // Redirigir a la nueva mesa
+      navigate(`/mesas/${nuevaMesaId}`);
+    } catch (error) {
+      console.error("Error al cambiar mesa:", error);
+      toast.error("Error al cambiar la mesa");
+    }
   };
 
   const handleAgregarIngrediente = (producto) => {
@@ -408,6 +581,18 @@ export const MesasPage = () => {
     setPedidoActual((prev) => {
       const nuevosProductos = prev.productos.filter((p) => p.uid !== uid);
       const totales = calcularTotal(nuevosProductos, prev.descuento);
+
+      // Si después de eliminar no quedan productos, limpiamos el localStorage
+      if (nuevosProductos.length === 0) {
+        localStorage.removeItem(STORAGE_KEY);
+        return {
+          productos: [],
+          subtotal: 0,
+          descuento: 0,
+          total: 0,
+        };
+      }
+
       return {
         productos: nuevosProductos,
         ...totales,
@@ -483,7 +668,7 @@ export const MesasPage = () => {
       <div className="bg-white border-b border-[#AAB99A] p-2 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/main", { replace: true })}
             className="bg-[#727D73] text-white px-2 py-1 rounded hover:bg-[#727D73]/90"
           >
             ←
@@ -741,12 +926,34 @@ export const MesasPage = () => {
             <button className="px-3 py-1.5 bg-[#727D73] text-white text-sm rounded hover:bg-[#727D73]/90">
               Asignar Cliente
             </button>
-            <button className="px-3 py-1.5 bg-[#727D73] text-white text-sm rounded hover:bg-[#727D73]/90">
+            <button
+              onClick={() => setIsCambiarMesaModalOpen(true)}
+              disabled={
+                !pedidoActual?.productos || pedidoActual.productos.length === 0
+              }
+              className={`px-3 py-1.5 text-sm rounded ${
+                pedidoActual?.productos?.length > 0
+                  ? "bg-[#727D73] text-white hover:bg-[#727D73]/90"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+            >
               Cambiar Mesa
             </button>
           </div>
           <div className="flex gap-2">
-            <button className="px-3 py-1.5 bg-[#727D73] text-white text-sm rounded hover:bg-[#727D73]/90">
+            <button
+              onClick={() => {
+                if (
+                  !pedidoActual?.productos ||
+                  pedidoActual.productos.length === 0
+                ) {
+                  toast.warning("No hay productos para dividir");
+                  return;
+                }
+                setIsDividirMesaModalOpen(true);
+              }}
+              className="px-3 py-1.5 bg-[#727D73] text-white text-sm rounded hover:bg-[#727D73]/90"
+            >
               Dividir Mesa
             </button>
             <button
@@ -761,20 +968,35 @@ export const MesasPage = () => {
             <button className="px-3 py-1.5 bg-[#727D73] text-white text-sm rounded hover:bg-[#727D73]/90">
               Imprimir
             </button>
-            <button className="px-3 py-1.5 bg-[#727D73] text-white text-sm rounded hover:bg-[#727D73]/90">
+            <button
+              onClick={() => {
+                if (
+                  !pedidoActual?.productos ||
+                  pedidoActual.productos.length === 0
+                ) {
+                  toast.warning("No hay productos en la mesa actual");
+                  return;
+                }
+                setIsJuntarMesaModalOpen(true);
+              }}
+              className="px-3 py-1.5 bg-[#727D73] text-white text-sm rounded hover:bg-[#727D73]/90"
+            >
               Juntar Mesa
             </button>
           </div>
         </div>
       </div>
       {/* Modal de ingredientes para agregar */}
-      <Dialog 
+      <Dialog
         open={isIngredientModalOpen}
         onOpenChange={setIsIngredientModalOpen}
       >
         <DialogPortal>
-          <DialogOverlay className="bg-black/80" onClick={(e) => e.stopPropagation()} />
-          <DialogContent 
+          <DialogOverlay
+            className="bg-black/80"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <DialogContent
             className="bg-[#F0F0D7] border border-[#AAB99A]"
             onOpenAutoFocus={(e) => e.preventDefault()}
             onInteractOutside={(e) => e.preventDefault()}
@@ -819,13 +1041,16 @@ export const MesasPage = () => {
       </Dialog>
 
       {/* Modal para quitar ingredientes */}
-      <Dialog 
+      <Dialog
         open={isRemoveIngredientModalOpen}
         onOpenChange={setIsRemoveIngredientModalOpen}
       >
         <DialogPortal>
-          <DialogOverlay className="bg-black/80" onClick={(e) => e.stopPropagation()} />
-          <DialogContent 
+          <DialogOverlay
+            className="bg-black/80"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <DialogContent
             className="bg-[#F0F0D7] border border-[#AAB99A]"
             onOpenAutoFocus={(e) => e.preventDefault()}
             onInteractOutside={(e) => e.preventDefault()}
@@ -859,7 +1084,7 @@ export const MesasPage = () => {
       </Dialog>
 
       {/* Modal de selección de cantidad */}
-      <Dialog 
+      <Dialog
         open={isSelectCantidadModalOpen}
         onOpenChange={(open) => {
           setIsSelectCantidadModalOpen(open);
@@ -870,8 +1095,11 @@ export const MesasPage = () => {
         }}
       >
         <DialogPortal>
-          <DialogOverlay className="bg-black/80" onClick={(e) => e.stopPropagation()} />
-          <DialogContent 
+          <DialogOverlay
+            className="bg-black/80"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <DialogContent
             className="bg-[#F0F0D7] border border-[#AAB99A]"
             onOpenAutoFocus={(e) => e.preventDefault()}
             onInteractOutside={(e) => e.preventDefault()}
@@ -888,7 +1116,9 @@ export const MesasPage = () => {
                 <div>Producto: {selectedProduct?.nombre}</div>
                 <div className="text-sm text-gray-600">
                   {selectedIngredientToAdd?.nombre}:{" "}
-                  {currentAction === "add" ? "Agregar cantidad" : "Quitar cantidad"}
+                  {currentAction === "add"
+                    ? "Agregar cantidad"
+                    : "Quitar cantidad"}
                 </div>
               </div>
               <div className="grid grid-cols-4 gap-4">
@@ -897,7 +1127,10 @@ export const MesasPage = () => {
                     key={i + 1}
                     onClick={() => {
                       if (currentAction === "add") {
-                        handleConfirmAgregarIngrediente(i + 1, selectedIngredientToAdd);
+                        handleConfirmAgregarIngrediente(
+                          i + 1,
+                          selectedIngredientToAdd
+                        );
                       } else {
                         handleQuitarIngrediente(
                           selectedProduct,
@@ -932,9 +1165,35 @@ export const MesasPage = () => {
           if (!open) setDescuentoTemp(pedidoActual.descuento);
         }}
       >
+        <JuntarMesaDialog
+          open={isJuntarMesaModalOpen}
+          onOpenChange={setIsJuntarMesaModalOpen}
+          mesaActual={mesaId}
+          onJuntarMesa={handleJuntarMesa}
+          getMesas={getMesas}
+        />
+
+        <DividirMesaDialog
+          open={isDividirMesaModalOpen}
+          onOpenChange={setIsDividirMesaModalOpen}
+          mesaActual={mesa?.numero}
+          pedidoActual={pedidoActual}
+          onCobrarPedidoDividido={handleCobrarPedidoDividido}
+        />
+
+        <CambiarMesaDialog
+          open={isCambiarMesaModalOpen}
+          onOpenChange={setIsCambiarMesaModalOpen}
+          mesaActual={mesaId}
+          onCambiarMesa={handleCambiarMesa}
+          getMesas={getMesas}
+        />
         <DialogPortal>
-          <DialogOverlay className="bg-black/80" onClick={(e) => e.stopPropagation()} />
-          <DialogContent 
+          <DialogOverlay
+            className="bg-black/80"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <DialogContent
             className="bg-[#F0F0D7] border border-[#AAB99A] max-w-sm"
             onOpenAutoFocus={(e) => e.preventDefault()}
             onInteractOutside={(e) => e.preventDefault()}
@@ -958,7 +1217,10 @@ export const MesasPage = () => {
                       max="100"
                       value={descuentoTemp}
                       onChange={(e) => {
-                        const value = Math.min(100, Math.max(0, Number(e.target.value)));
+                        const value = Math.min(
+                          100,
+                          Math.max(0, Number(e.target.value))
+                        );
                         setDescuentoTemp(value);
                       }}
                       className="w-full px-3 py-2 border border-[#AAB99A] rounded text-[#727D73]"
@@ -982,20 +1244,20 @@ export const MesasPage = () => {
                       <span>Descuento ({descuentoTemp}%):</span>
                       <span>
                         -
-                        {(pedidoActual.subtotal * (descuentoTemp / 100) || 0).toLocaleString(
-                          "es-ES",
-                          {
-                            style: "currency",
-                            currency: "EUR",
-                          }
-                        )}
+                        {(
+                          pedidoActual.subtotal * (descuentoTemp / 100) || 0
+                        ).toLocaleString("es-ES", {
+                          style: "currency",
+                          currency: "EUR",
+                        })}
                       </span>
                     </div>
                     <div className="flex justify-between font-medium pt-1 border-t border-[#AAB99A]">
                       <span>Total con descuento:</span>
                       <span>
                         {(
-                          pedidoActual.subtotal * (1 - descuentoTemp / 100)
+                          pedidoActual.subtotal *
+                          (1 - descuentoTemp / 100)
                         ).toLocaleString("es-ES", {
                           style: "currency",
                           currency: "EUR",

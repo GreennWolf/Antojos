@@ -1,8 +1,8 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getMesasBySalon } from '../../services/mesasService';
-import { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { getMesasBySalon } from "../../services/mesasService";
+import { useState, useEffect } from "react";
+import { toast } from "react-toastify";
 
 export const Mesas = ({ salonId, onMesaSelect }) => {
   const navigate = useNavigate();
@@ -20,31 +20,36 @@ export const Mesas = ({ salonId, onMesaSelect }) => {
   useEffect(() => {
     // Verificar pedidos activos en localStorage para cada mesa
     const mesasActivas = new Set();
-    mesas.forEach(mesa => {
+    mesas.forEach((mesa) => {
       const pedidoKey = `mesa_pedido_${mesa._id}`;
       const pedidoGuardado = localStorage.getItem(pedidoKey);
-      
+
       if (pedidoGuardado) {
         try {
           const pedido = JSON.parse(pedidoGuardado);
-          if (pedido.productos?.length > 0) {
+          // Solo consideramos mesa activa si tiene productos Y el subtotal es mayor que 0
+          if (pedido.productos?.length > 0 && pedido.subtotal > 0) {
             mesasActivas.add(mesa._id);
+          } else if (pedido.productos?.length === 0 || pedido.subtotal === 0) {
+            // Si no hay productos o el subtotal es 0, eliminamos el pedido del localStorage
+            localStorage.removeItem(pedidoKey);
           }
         } catch (error) {
-          console.error('Error al parsear pedido:', error);
+          console.error("Error al parsear pedido:", error);
+          // Si hay error en el pedido, lo eliminamos
+          localStorage.removeItem(pedidoKey);
         }
       }
     });
     setMesasConPedido(mesasActivas);
   }, [mesas]);
-
   const cargarMesas = async (salonId) => {
     try {
       setIsLoadingMesas(true);
       const mesasData = await getMesasBySalon(salonId);
       setMesas(mesasData);
     } catch (error) {
-      toast.error('Error al cargar las mesas');
+      toast.error("Error al cargar las mesas");
     } finally {
       setIsLoadingMesas(false);
     }
@@ -54,16 +59,16 @@ export const Mesas = ({ salonId, onMesaSelect }) => {
     setSelectedMesa(mesa);
     const pedidoKey = `mesa_pedido_${mesa._id}`;
     const pedidoGuardado = localStorage.getItem(pedidoKey);
-    
+
     let pedido = null;
     if (pedidoGuardado) {
       try {
         pedido = JSON.parse(pedidoGuardado);
       } catch (error) {
-        console.error('Error al parsear pedido:', error);
+        console.error("Error al parsear pedido:", error);
       }
     }
-    
+
     onMesaSelect(mesa, pedido);
   };
 
@@ -88,11 +93,16 @@ export const Mesas = ({ salonId, onMesaSelect }) => {
           onDoubleClick={() => handleMesaDoubleClick(mesa._id)}
           className={`aspect-square rounded-lg border-2 
             flex items-center justify-center cursor-pointer transition-colors
-            ${selectedMesa?._id === mesa._id ? 'border-4' : 'border-2'}
-            ${selectedMesa?._id === mesa._id ? 'border-[#727D73]' : 'border-[#727D73]'}
-            ${mesasConPedido.has(mesa._id)
-              ? 'bg-[#9cc273] hover:bg-[#AAB99A]/80'
-              : 'bg-[#D0DDD0] hover:bg-[#D0DDD0]/80'
+            ${selectedMesa?._id === mesa._id ? "border-4" : "border-2"}
+            ${
+              selectedMesa?._id === mesa._id
+                ? "border-[#727D73]"
+                : "border-[#727D73]"
+            }
+            ${
+              mesasConPedido.has(mesa._id)
+                ? "bg-[#9cc273] hover:bg-[#AAB99A]/80"
+                : "bg-[#D0DDD0] hover:bg-[#D0DDD0]/80"
             }`}
         >
           <span className="text-md font-medium text-[#727D73] text-center">
