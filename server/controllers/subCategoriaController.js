@@ -16,7 +16,7 @@ const subCategoriaController = {
        try {
            const subCategorias = await SubCategorias.find()
                .populate('categoria')
-               .populate('ingredientesPermitidos');
+               .populate('ingredientesPermitidos').populate('Zona');;
            res.json(subCategorias);
        } catch (error) {
            res.status(500).json({ message: error.message });
@@ -27,7 +27,7 @@ const subCategoriaController = {
        try {
            const subCategoria = await SubCategorias.findById(req.params.id)
                .populate('categoria')
-               .populate('ingredientesPermitidos');
+               .populate('ingredientesPermitidos').populate('Zona');
            if (!subCategoria) return res.status(404).json({ message: 'SubCategoría no encontrada' });
            res.json(subCategoria);
        } catch (error) {

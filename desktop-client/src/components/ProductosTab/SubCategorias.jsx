@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { getZonas } from '../../services/zonasService';
 
 import {
   createSubCategoria,
@@ -49,7 +50,7 @@ export const SubCategorias = () => {
   const [ingredientesDisponibles, setIngredientesDisponibles] = useState([]);
   const [ingredientesSeleccionados, setIngredientesSeleccionados] = useState([]);
   const [todosLosIngredientes, setTodosLosIngredientes] = useState([]);
-
+  const [zonas, setZonas] = useState([]);
   // Estado del formulario
   const [formData, setFormData] = useState({
     nombre: '',
@@ -57,7 +58,8 @@ export const SubCategorias = () => {
     categoria: '',
     iva: 10,
     active: true,
-    ingredientesPermitidos: []
+    ingredientesPermitidos: [],
+    Zona: '' // Agregamos este campo
   });
 
   // Efecto inicial para cargar datos
@@ -69,16 +71,18 @@ export const SubCategorias = () => {
   const cargarDatos = async () => {
     try {
       setIsLoading(true);
-      const [categoriasData, subCategoriasData, ingredientesData] = await Promise.all([
+      const [categoriasData, subCategoriasData, ingredientesData, zonasData] = await Promise.all([
         getCategorias(),
         getSubCategorias(),
-        getIngredientes()
+        getIngredientes(),
+        getZonas()
       ]);
       
-      setCategorias(categoriasData);
+      setCategorias(categoriasData.filter(cat => cat.ingrediente == false));
       setSubCategorias(subCategoriasData);
       setTodosLosIngredientes(ingredientesData);
       setIngredientesDisponibles(ingredientesData.map(ing => ({...ing, selected: false})));
+      setZonas(zonasData);
     } catch (error) {
       toast.error('Error al cargar los datos');
     } finally {
@@ -156,42 +160,39 @@ export const SubCategorias = () => {
   // Funciones para manejar el diálogo
   const handleOpenDialog = (subCategoria = null) => {
     if (subCategoria) {
-      // Procesamos los IDs de ingredientes permitidos
       const permitidosIds = subCategoria.ingredientesPermitidos.map(ing => 
         typeof ing === 'string' ? ing : ing._id
       );
       
-      // Filtramos los ingredientes en las listas correspondientes
       const selectedIngs = todosLosIngredientes.filter(ing => 
         permitidosIds.includes(ing._id)
       );
       const availableIngs = todosLosIngredientes.filter(ing => 
         !permitidosIds.includes(ing._id)
       );
-
-      // Configuramos el formulario
+  
       setFormData({
         nombre: subCategoria.nombre,
         descripcion: subCategoria.descripcion,
         categoria: subCategoria.categoria?._id || '',
         iva: subCategoria.iva,
         active: subCategoria.active,
-        ingredientesPermitidos: subCategoria.ingredientesPermitidos || []
+        ingredientesPermitidos: subCategoria.ingredientesPermitidos || [],
+        Zona: subCategoria.Zona?._id || '' // Agregamos esto
       });
-
-      // Actualizamos estados
+  
       setEditingSubCategoria(subCategoria);
       setIngredientesSeleccionados(selectedIngs.map(ing => ({...ing, selected: false})));
       setIngredientesDisponibles(availableIngs.map(ing => ({...ing, selected: false})));
     } else {
-      // Reset para nuevo registro
       setFormData({
         nombre: '',
         descripcion: '',
         categoria: '',
         iva: 10,
         active: true,
-        ingredientesPermitidos: []
+        ingredientesPermitidos: [],
+        Zona: '' // Agregamos esto
       });
       setEditingSubCategoria(null);
       setIngredientesSeleccionados([]);
@@ -274,6 +275,7 @@ export const SubCategorias = () => {
     return (
       subCategoria.nombre.toLowerCase().includes(searchString) ||
       subCategoria.categoria?.nombre?.toLowerCase().includes(searchString) ||
+      subCategoria.Zona?.nombre?.toLowerCase().includes(searchString) ||
       subCategoria.iva?.toString().includes(searchString)
     );
   });
@@ -320,6 +322,7 @@ export const SubCategorias = () => {
             <tr className="bg-[#AAB99A] bg-opacity-30">
               <th className="px-4 py-3 text-left text-sm font-medium text-[#727D73]">Nombre</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-[#727D73]">Categoría</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-[#727D73]">Zona</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-[#727D73]">IVA</th>
               <th className="px-4 py-3 text-center text-sm font-medium text-[#727D73]">Estado</th>
               <th className="px-4 py-3 text-center text-sm font-medium text-[#727D73]">Acciones</th>
@@ -341,6 +344,7 @@ export const SubCategorias = () => {
                     onClick={() => handleOpenViewDialog(subCategoria)}>
                   <td className="px-4 py-3">{subCategoria.nombre}</td>
                   <td className="px-4 py-3">{subCategoria.categoria?.nombre}</td>
+                  <td className="px-4 py-3">{subCategoria.Zona.nombre}</td>
                   <td className="px-4 py-3">{subCategoria.iva}%</td>
                   <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
                     <button
@@ -426,6 +430,7 @@ export const SubCategorias = () => {
                   <div className="mt-2 space-y-2">
                     <p><span className="font-medium">Nombre:</span> {viewingSubCategoria.nombre}</p>
                     <p><span className="font-medium">Categoría:</span> {viewingSubCategoria.categoria?.nombre}</p>
+                    <p><span className="font-medium">Zona de Impresión:</span> {viewingSubCategoria.Zona?.nombre}</p>
                     <p><span className="font-medium">IVA:</span> {viewingSubCategoria.iva}%</p>
                     <p><span className="font-medium">Estado:</span> {viewingSubCategoria.active ? 'Activo' : 'Inactivo'}</p>
                   </div>
@@ -519,6 +524,32 @@ export const SubCategorias = () => {
                         ))
                     ) : (
                       <option value="" disabled>Cargando categorías...</option>
+                    )}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-sm font-medium text-[#727D73]">
+                    Zona de Impresión
+                  </label>
+                  <select
+                    name="Zona"
+                    value={formData.Zona}
+                    onChange={handleInputChange}
+                    className="col-span-3 bg-white border-[#AAB99A] rounded-md p-2"
+                    required
+                  >
+                    <option value="">Seleccione una zona</option>
+                    {zonas.length > 0 ? (
+                      zonas
+                        .filter(zona => zona.active)
+                        .map(zona => (
+                          <option key={zona._id} value={zona._id}>
+                            {zona.nombre}
+                          </option>
+                        ))
+                    ) : (
+                      <option value="" disabled>Cargando zonas...</option>
                     )}
                   </select>
                 </div>

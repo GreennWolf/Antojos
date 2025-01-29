@@ -26,6 +26,7 @@ const ticketsTempsController = {
 
             if (!ticket) {
                 // Crear nueva mesa abierta
+                console.log(req.body)
                 ticket = new TicketsTemps({ mesa, camarero, productos, subtotal, total });
                 await ticket.save();
             } else {

@@ -25,6 +25,11 @@ const SubCategoriasSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Ingredientes'
     }],
+    Zona: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Zonas',
+        required:true,
+    },
     active: {
         type: Boolean,
         required: true,

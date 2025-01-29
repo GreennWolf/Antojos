@@ -79,7 +79,7 @@ const hasPrivilege = (requiredPrivilege) => {
       id: 'zonasImpresion', 
       label: 'Zonas de Impresión', 
       component: <ZonasImpresion/>,
-      privilege: { action: 'READ', resource: 'ZONAS' },  // Cambiado de CUENTA a EMPLEADOS
+      privilege: { action: 'READ', resource: 'ZONAS_IMPRESION' },  // Cambiado de CUENTA a EMPLEADOS
     },
     { 
       id: 'comercio', 
