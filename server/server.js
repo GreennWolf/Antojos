@@ -49,7 +49,7 @@ app.use('/api/productos', require('./routes/productosRoutes'));
 app.use('/api/ingredientes', require('./routes/ingredientesRoutes'));
 app.use('/api/usuarios', require('./routes/usuariosRoutes'));
 app.use('/api/roles', require('./routes/rolesRoutes'));
-app.use('/api/tickets-temp', require('./routes/ticketsTempsRoutes'));
+app.use('/api/tickets-temps', require('./routes/ticketsTempsRoutes'));
 app.use('/api/tickets', require('./routes/ticketRoutes'));
 app.use('/api/precuentas', require('./routes/preCuentaRoutes'));
 

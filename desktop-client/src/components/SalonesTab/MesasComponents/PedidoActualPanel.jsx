@@ -7,7 +7,8 @@ const PedidoActualPanel = ({
   onUpdateCantidad,
   onAgregarIngrediente,
   onQuitarIngrediente,
-  onEliminarProducto
+  onEliminarProducto,
+  onAgregarObservaciones
 }) => {
   const { productos = [], subtotal = 0, descuento = 0, total = 0 } = pedido || {};
 
@@ -25,6 +26,7 @@ const PedidoActualPanel = ({
         onAgregarIngrediente={onAgregarIngrediente}
         onQuitarIngrediente={onQuitarIngrediente}
         onEliminarProducto={onEliminarProducto}
+        onAgregarObservaciones={onAgregarObservaciones}
       />
 
       {/* Resumen de totales */}

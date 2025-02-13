@@ -19,11 +19,19 @@ const TicketsTempsSchema = new mongoose.Schema({
             ref: 'Productos',
             required: true
         },
+        uid:{
+            type:String,
+        },
         ingredientes: {
             excluidos: [{
                 ingrediente: {
                     type: mongoose.Schema.Types.ObjectId,
                     ref: 'Ingredientes'
+                },
+                cantidad: {
+                    type: Number,
+                    default: 1,
+                    min: 1
                 },
             }],
             extras: [{
@@ -51,7 +59,9 @@ const TicketsTempsSchema = new mongoose.Schema({
             type: Number,
             required: true
         },
-        observaciones: String,
+        observaciones: {
+            type:String,
+        },
         horaEnvio: {
             type: Date,
             default: Date.now
@@ -61,6 +71,9 @@ const TicketsTempsSchema = new mongoose.Schema({
         producto: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Productos',
+        },
+        uid:{
+            type:String,
         },
         ingredientes: {
             excluidos: [{
@@ -96,6 +109,10 @@ const TicketsTempsSchema = new mongoose.Schema({
         horaEliminacion: {
             type: Date,
             default: Date.now
+        },
+        eliminadoPor:{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Usuarios'
         }
     }],
     descuento: {

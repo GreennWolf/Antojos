@@ -23,6 +23,7 @@ router.post('/factura-a',
    ticketController.createFacturaA
 );
 
+
 // Anular ticket
 router.post('/anular',
    authorize(PRIVILEGES.TICKETS.CANCEL),

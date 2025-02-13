@@ -1,3 +1,4 @@
+// CantidadModal.jsx
 import React from 'react';
 import { X } from 'lucide-react';
 import {
@@ -18,28 +19,47 @@ const CantidadModal = ({
   onConfirm,
   cantidadMaxima = 10
 }) => {
-  // Función para calcular la cantidad disponible según la acción
+  // Función para extraer el _id de un ingrediente (ya sea objeto o string)
+  const getIngredienteId = (ing) => {
+    if (!ing) return null;
+    return typeof ing === 'string' ? ing : ing._id;
+  };
+
+  // Función para calcular la cantidad disponible según la acción "quitar"
   const getCantidadDisponible = () => {
+    // Si la acción no es quitar, usamos la cantidad máxima (para agregar)
     if (accion !== 'quitar') return cantidadMaxima;
-  
-    const ingBase = producto?.producto?.ingredientes?.find(
-      ing => ing.ingrediente._id === ingrediente?._id
-    );
-  
-    if (!ingBase) return 0;
-  
-    // Buscar cuántos ya están excluidos
-    const exclusionExistente = producto.ingredientes.excluidos.find(
-      exc => exc.ingrediente === ingrediente._id
-    );
-  
+
+    // Buscamos el ingrediente en los ingredientes base del producto.
+    const ingBase = producto?.producto?.ingredientes?.find(ing => {
+      const id = getIngredienteId(ing.ingrediente);
+      return id && id.toString() === ingrediente?._id.toString();
+    });
+
+    // Buscamos el ingrediente en los extras agregados al producto.
+    const ingExtra = producto?.ingredientes?.extras?.find(ext => {
+      const id = getIngredienteId(ext.ingrediente);
+      return id && id.toString() === ingrediente?._id.toString();
+    });
+
+    // Calculamos el total disponible (base + extras)
+    const cantidadBase = ingBase?.cantidad || 0;
+    const cantidadExtra = ingExtra?.cantidad || 0;
+    const cantidadTotal = cantidadBase + cantidadExtra;
+
+    // Verificamos cuántos ya se han excluido (quitado)
+    const exclusionExistente = producto?.ingredientes?.excluidos?.find(exc => {
+      const id = getIngredienteId(exc.ingrediente);
+      return id && id.toString() === ingrediente?._id.toString();
+    });
+
     const cantidadExcluida = exclusionExistente?.cantidad || 0;
-    
-    // La cantidad disponible es la cantidad base menos lo ya excluido
-    return Math.max(0, ingBase.cantidad - cantidadExcluida);
+    return Math.max(0, cantidadTotal - cantidadExcluida);
   };
 
   const cantidadDisponible = getCantidadDisponible();
+  // La cantidad de botones a mostrar es la mínima entre la cantidad máxima (definida o predeterminada)
+  // y la cantidad disponible calculada
   const cantidadBotones = Math.min(cantidadMaxima, cantidadDisponible);
 
   // Si no hay producto o ingrediente, no mostramos el modal

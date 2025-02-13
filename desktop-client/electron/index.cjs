@@ -1,5 +1,4 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
-const { join } = require('path');
 const path = require('path');
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -18,7 +17,7 @@ function createWindow() {
   });
 
   mainWindow.on('show', () => {
-    // También manejar cuando la ventana se muestra
+    // Por ejemplo, para forzar actualización de la interfaz
     setTimeout(() => {
       mainWindow.webContents.send('force-update');
     }, 100);
@@ -33,11 +32,10 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 }
 
-// Handle para obtener impresoras
 ipcMain.handle('get-printers', async () => {
   try {
     return mainWindow.webContents.getPrintersAsync();
@@ -47,21 +45,46 @@ ipcMain.handle('get-printers', async () => {
   }
 });
 
-// Agrega un manejador específico para el foco
 ipcMain.handle('get-window-focus', () => {
   return mainWindow.isFocused();
+});
+
+// Nuevo canal IPC para imprimir el ticket de zona
+ipcMain.on('print-ticket-zona', (event, { htmlContent, printerName }) => {
+  // Creamos una ventana oculta para la impresión
+  let printWindow = new BrowserWindow({
+    width: 300,
+    height: 600,
+    show: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
+
+  // Cargamos el HTML generado
+  printWindow.loadURL("data:text/html;charset=utf-8," + encodeURI(htmlContent));
+
+  printWindow.webContents.on("did-finish-load", () => {
+    printWindow.webContents.print({
+      silent: true,
+      printBackground: true,
+      deviceName: printerName, // Nombre de la impresora asignada a esa zona
+    }, (success, errorType) => {
+      if (!success) {
+        console.error("Error de impresión:", errorType);
+      }
+      printWindow.close();
+    });
+  });
 });
 
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });

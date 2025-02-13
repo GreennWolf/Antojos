@@ -6,7 +6,8 @@ const ProductosPedidoList = ({
   onUpdateCantidad,
   onAgregarIngrediente,
   onQuitarIngrediente,
-  onEliminarProducto
+  onEliminarProducto,
+  onAgregarObservaciones
 }) => {
   if (!productos || productos.length === 0) {
     return (
@@ -27,6 +28,7 @@ const ProductosPedidoList = ({
             onAgregarIngrediente={onAgregarIngrediente}
             onQuitarIngrediente={onQuitarIngrediente}
             onEliminarProducto={onEliminarProducto}
+            onAgregarObservaciones={onAgregarObservaciones} // Pasamos el callback
           />
         ))}
       </div>

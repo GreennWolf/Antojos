@@ -18,6 +18,12 @@ router.post(
 );
 
 router.post(
+    '/restar-cantidad',
+    authorize(PRIVILEGES.TICKETS_TEMP.REMOVE_PRODUCTOS),
+    ticketsTempsController.restarCantidad
+);
+
+router.post(
     '/apply-descuento',
     authorize(PRIVILEGES.TICKETS_TEMP.APPLY_DESCUENTO),
     ticketsTempsController.applyDescuento

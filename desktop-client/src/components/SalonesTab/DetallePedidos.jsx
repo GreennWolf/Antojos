@@ -11,7 +11,7 @@ export const DetallePedido = ({ pedido }) => {
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <div className="text-[#727D73] font-medium">
-                  {producto.nombre}
+                  {producto.producto.nombre}
                 </div>
                 <div className="text-sm text-gray-600">
                   {((producto.precio || 0) * producto.cantidad).toLocaleString("es-ES", {

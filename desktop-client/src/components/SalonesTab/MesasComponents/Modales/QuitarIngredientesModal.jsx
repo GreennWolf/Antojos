@@ -14,30 +14,89 @@ const QuitarIngredientesModal = ({
   isOpen,
   onClose,
   producto,
-  ingredientes, // Ingredientes permitidos de la subcategoría
-  onIngredienteSelect
+  ingredientes, // Lista de ingredientes permitidos (por ejemplo, de la subcategoría)
+  onIngredienteSelect,
 }) => {
   if (!producto) return null;
 
-  // Obtenemos los ingredientes base que aún no han sido excluidos
-  // y que están en la lista de permitidos
-  const ingredientesQuitables = producto.producto.ingredientes?.filter(ing => {
-    // Primero verificamos si el ingrediente está permitido en la subcategoría
-    const estaPermitido = ingredientes.some(
-      permitido => permitido._id === ing.ingrediente._id
+  /**
+   * Armamos un arreglo de "ingredientes quitables" combinando:
+   * - Los ingredientes base del producto (producto.producto.ingredientes)
+   * - Los ingredientes extras (producto.ingredientes.extras)
+   * Cada entrada contiene:
+   *    - ingrediente: objeto con _id y nombre (nos aseguramos de que sea un objeto)
+   *    - cantidadBase: cantidad original (de la receta base)
+   *    - cantidadExtra: cantidad agregada como extra
+   */
+  const ingredientesQuitables = [
+    // Ingredientes base del producto
+    ...(producto.producto.ingredientes?.map(ing => {
+      // Si ing.ingrediente es un string, lo envolvemos en un objeto.
+      const ingredienteObj =
+        typeof ing.ingrediente === 'string'
+          ? { _id: ing.ingrediente }
+          : { ...ing.ingrediente };
+      return {
+        ingrediente: ingredienteObj,
+        cantidadBase: ing.cantidad,
+        cantidadExtra: 0,
+      };
+    }) || []),
+    // Ingredientes extras agregados al producto
+    ...((producto.ingredientes.extras || []).map(extra => ({
+      ingrediente: {
+        _id: extra.ingrediente,
+        nombre: extra.nombre,
+      },
+      cantidadBase: 0,
+      cantidadExtra: extra.cantidad,
+    })))
+  ].reduce((acc, curr) => {
+    // Si el ingrediente ya existe, sumamos las cantidades
+    const existente = acc.find(item =>
+      item.ingrediente._id.toString() === curr.ingrediente._id.toString()
     );
+    if (existente) {
+      existente.cantidadBase += curr.cantidadBase;
+      existente.cantidadExtra += curr.cantidadExtra;
+    } else {
+      acc.push(curr);
+    }
+    return acc;
+  }, []);
 
-    if (!estaPermitido) return false;
+  // Filtramos para que queden solo los ingredientes que estén en la lista de permitidos
+  const ingredientesPermitidosIds = ingredientes.map(item => item._id.toString());
+  const ingredientesFiltradosPermitidos = ingredientesQuitables.filter(ing =>
+    ingredientesPermitidosIds.includes(ing.ingrediente._id.toString())
+  );
 
-    // Luego verificamos las exclusiones existentes
-    const exclusionExistente = producto.ingredientes.excluidos.find(
-      exc => exc.ingrediente === ing.ingrediente._id
+  // Actualizamos el nombre basado en la lista de ingredientes permitidos
+  const ingredientesConNombreActualizado = ingredientesFiltradosPermitidos.map(ing => {
+    const ingredientePermitido = ingredientes.find(
+      item => item._id.toString() === ing.ingrediente._id.toString()
     );
-    
-    // Si no hay exclusión o aún se puede excluir más, mostramos el ingrediente
-    return !exclusionExistente || 
-      (exclusionExistente && exclusionExistente.cantidad < ing.cantidad);
+    return {
+      ...ing,
+      ingrediente: {
+        ...ing.ingrediente,
+        nombre: ingredientePermitido ? ingredientePermitido.nombre : ing.ingrediente.nombre
+      }
+    };
   });
+
+  // Filtramos los ingredientes que aún tienen cantidad disponible para quitar.
+  // Se tiene en cuenta si ya han sido "excluidos" (quitados).
+  const ingredientesFinales = ingredientesConNombreActualizado.filter(ing => {
+    const exclusionExistente = (producto.ingredientes.excluidos || []).find(
+      exc => exc.ingrediente.toString() === ing.ingrediente._id.toString()
+    );
+    const cantidadTotal = ing.cantidadBase + ing.cantidadExtra;
+    // Se muestra el ingrediente si no existe exclusión o si la cantidad excluida es menor al total.
+    return !exclusionExistente || (exclusionExistente.cantidad < cantidadTotal);
+  });
+
+  // console.log(ingredientes,ingredientesFiltradosPermitidos,ingredientesFinales)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -58,11 +117,14 @@ const QuitarIngredientesModal = ({
           </DialogHeader>
 
           <div className="grid grid-cols-4 gap-2 p-4">
-            {ingredientesQuitables?.length > 0 ? (
-              ingredientesQuitables.map((ing) => {
-                const exclusionExistente = producto.ingredientes.excluidos.find(
-                  exc => exc.ingrediente === ing.ingrediente._id
+            {ingredientesFinales.length > 0 ? (
+              ingredientesFinales.map((ing) => {
+                // Buscamos si existe exclusión para este ingrediente
+                const exclusionExistente = (producto.ingredientes.excluidos || []).find(
+                  exc => exc.ingrediente.toString() === ing.ingrediente._id.toString()
                 );
+                const cantidadTotal = ing.cantidadBase + ing.cantidadExtra;
+                const cantidadDisponible = cantidadTotal - (exclusionExistente?.cantidad || 0);
 
                 return (
                   <button
@@ -73,10 +135,10 @@ const QuitarIngredientesModal = ({
                   >
                     <span>{ing.ingrediente.nombre}</span>
                     <span className="text-xs text-gray-500">
-                      ({ing.unidad})
+                      Disponible: {cantidadDisponible}
                       {exclusionExistente && (
                         <span className="text-red-500 ml-1">
-                          -{exclusionExistente.cantidad}
+                          (-{exclusionExistente.cantidad})
                         </span>
                       )}
                     </span>

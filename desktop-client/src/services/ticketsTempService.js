@@ -23,20 +23,24 @@ api.interceptors.request.use(
 
 // Función para confirmar un pedido
 export const confirmarPedido = async (pedidoData) => {
-   try {
-       const response = await api.post('/confirmar-pedido', pedidoData);
-       return response.data;
-   } catch (error) {
-       if (error.response && error.response.data) {
-           const message = error.response.data.message;
-           if (message.includes('Stock insuficiente')) {
-               throw new Error(message);
-           }
-       }
-       console.error('Error al confirmar pedido:', error);
-       throw error;
-   }
-};
+    try {
+        const response = await api.post('/confirmar-pedido', pedidoData);
+        return response.data;
+    } catch (error) {
+        // Verificamos que exista error.response.data y que message sea string
+        if (error.response?.data?.message && typeof error.response.data.message === 'string') {
+            if (error.response.data.message.includes('Stock insuficiente')) {
+                throw new Error(error.response.data.message);
+            }
+        }
+  
+        // Si no es un error de stock, lanzamos un error genérico
+        throw new Error(
+          error.response?.data?.message || 
+          'Error al confirmar el pedido'
+        );
+    }
+  };
 
 // Función para eliminar un producto del ticket
 export const removeProducto = async (removeData) => {
@@ -57,6 +61,27 @@ export const removeProducto = async (removeData) => {
        throw error;
    }
 };
+
+export const restarCantidad = async (restarData) => {
+    try {
+        const response = await api.post('/restar-cantidad', restarData);
+        return response.data;
+    } catch (error) {
+        if (error.response) {
+            if (error.response.status === 401) {
+                throw new Error('Usuario no encontrado o código incorrecto');
+            } else if (error.response.status === 403) {
+                throw new Error('No tienes permisos para modificar productos');
+            } else if (error.response.status === 404) {
+                throw new Error('Producto o ticket no encontrado');
+            } else if (error.response.status === 400) {
+                throw new Error(error.response.data?.message || 'La cantidad a restar no es válida');
+            }
+        }
+        console.error('Error al restar cantidad:', error);
+        throw new Error('Error al restar cantidad del producto');
+    }
+ };
 
 // Función para aplicar descuento
 export const applyDescuento = async (descuentoData) => {

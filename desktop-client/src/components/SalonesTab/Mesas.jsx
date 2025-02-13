@@ -1,48 +1,49 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMesasBySalon } from "../../services/mesasService";
-import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
+// Importa la función para traer las mesas según el salón y para traer el ticket activo de una mesa
+import { getMesasBySalon } from "../../services/mesasService";
+import { getTicketByMesa } from "../../services/ticketsTempService";
 
 export const Mesas = ({ salonId, onMesaSelect }) => {
   const navigate = useNavigate();
   const [mesas, setMesas] = useState([]);
   const [isLoadingMesas, setIsLoadingMesas] = useState(true);
+  // Este estado contendrá los IDs de mesas que tienen un ticket activo (pedido)
   const [mesasConPedido, setMesasConPedido] = useState(new Set());
   const [selectedMesa, setSelectedMesa] = useState(null);
 
+  // Cargar las mesas según el salonId
   useEffect(() => {
     if (salonId) {
       cargarMesas(salonId);
     }
   }, [salonId]);
 
+  // Una vez que se cargan las mesas, consultamos para cada mesa si existe un pedido activo en la BD
   useEffect(() => {
-    // Verificar pedidos activos en localStorage para cada mesa
-    const mesasActivas = new Set();
-    mesas.forEach((mesa) => {
-      const pedidoKey = `mesa_pedido_${mesa._id}`;
-      const pedidoGuardado = localStorage.getItem(pedidoKey);
-
-      if (pedidoGuardado) {
+    const cargarTicketsActivos = async () => {
+      const mesasActivas = new Set();
+      for (let mesa of mesas) {
         try {
-          const pedido = JSON.parse(pedidoGuardado);
-          // Solo consideramos mesa activa si tiene productos Y el subtotal es mayor que 0
-          if (pedido.productos?.length > 0 && pedido.subtotal > 0) {
+          const ticket = await getTicketByMesa(mesa._id);
+          console.log(ticket.productos.length > 0 && ticket);
+          // Consideramos que la mesa tiene pedido activo si el ticket existe, tiene productos y un subtotal mayor a 0
+          if (ticket) {
+            console.log(mesa._id , 'mesa')
             mesasActivas.add(mesa._id);
-          } else if (pedido.productos?.length === 0 || pedido.subtotal === 0) {
-            // Si no hay productos o el subtotal es 0, eliminamos el pedido del localStorage
-            localStorage.removeItem(pedidoKey);
           }
         } catch (error) {
-          console.error("Error al parsear pedido:", error);
-          // Si hay error en el pedido, lo eliminamos
-          localStorage.removeItem(pedidoKey);
+          // Si no hay ticket o ocurre un error, simplemente no se marca la mesa como activa
         }
       }
-    });
-    setMesasConPedido(mesasActivas);
+      setMesasConPedido(mesasActivas);
+    };
+    if (mesas.length > 0) {
+      cargarTicketsActivos();
+    }
   }, [mesas]);
+
   const cargarMesas = async (salonId) => {
     try {
       setIsLoadingMesas(true);
@@ -55,20 +56,15 @@ export const Mesas = ({ salonId, onMesaSelect }) => {
     }
   };
 
-  const handleMesaClick = (mesa) => {
+  // Al hacer click en una mesa, se selecciona y se consulta el ticket activo de esa mesa
+  const handleMesaClick = async (mesa) => {
     setSelectedMesa(mesa);
-    const pedidoKey = `mesa_pedido_${mesa._id}`;
-    const pedidoGuardado = localStorage.getItem(pedidoKey);
-
     let pedido = null;
-    if (pedidoGuardado) {
-      try {
-        pedido = JSON.parse(pedidoGuardado);
-      } catch (error) {
-        console.error("Error al parsear pedido:", error);
-      }
+    try {
+      pedido = await getTicketByMesa(mesa._id);
+    } catch (error) {
+      console.error("Error al obtener ticket:", error);
     }
-
     onMesaSelect(mesa, pedido);
   };
 
@@ -113,3 +109,5 @@ export const Mesas = ({ salonId, onMesaSelect }) => {
     </div>
   );
 };
+
+export default Mesas;
